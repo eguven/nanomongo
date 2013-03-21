@@ -47,7 +47,7 @@ class Field(object):
             else:
                 raise AssertionError(err_str % (k, v))
         self.validator = self.generate_validator(self.type_, **kwargs)
-        if 'default' in kwargs:
+        if 'default' in kwargs and not callable(kwargs['default']):
             try:
                 self.validator(kwargs['default'])
             except ValidationError as e:
