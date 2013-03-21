@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division
 import datetime
 
 from .errors import ValidationError
@@ -12,13 +11,13 @@ class Field(object):
     TODO: custom field validator
     """
     # ObjectId, DBRef
-    allowed_types = (bool, int, long, float, str, unicode, list, dict, datetime.datetime)
-    containers = (unicode, list, dict)
+    allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime)
+    containers = (bytes, str, list, dict)
     # kwarg_name : kwarg_input_validator dictionaries
     allowed_kwargs = {'default': lambda v: True,
                       'none_ok': lambda v: isinstance(v, bool),
                      }
-    container_kwargs = {'max_length': lambda v: isinstance(v, (int, long)) and v >= 0,
+    container_kwargs = {'max_length': lambda v: isinstance(v, int) and v >= 0,
                         'empty_ok': lambda v: isinstance(v, bool),
                        }
 
