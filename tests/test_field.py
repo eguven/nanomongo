@@ -92,3 +92,31 @@ class FieldTestCase(unittest.TestCase):
         [wrapped() for wrapped in valid_defs]
         [self.assertRaises(AssertionError, wrapped) for wrapped in invalid_defs]
 
+    def test_container_field_defs_list(self):
+        """Test Field definitions: list"""
+        valid_defs = [wrap(list), wrap(list, default=[], empty_ok=True),
+                      wrap(list, default=None, none_ok=True), wrap(list, default=[42, 'L33t']), 
+                      wrap(list, default=[3.14159265], max_length=1),
+                     ]
+        invalid_defs = [wrap(list, default=1), wrap(list, default=(1,)), wrap(list, default=[]),
+                        wrap(list, default=None), wrap(list, default=[], empty_ok=False),
+                        wrap(list, default=None, none_ok=False),
+                        wrap(list, default=[1,2,3,4], max_length=2)
+                       ]
+        [wrapped() for wrapped in valid_defs]
+        [self.assertRaises(AssertionError, wrapped) for wrapped in invalid_defs]
+
+    def test_container_field_defs_dict(self):
+        """Test Field definitions: dict"""
+        valid_defs = [wrap(dict), wrap(dict, default={}, empty_ok=True),
+                      wrap(dict, default=None, none_ok=True), wrap(dict, default=dict(a=1)),
+                      wrap(dict, default={'L33t':42}, max_length=1),
+                     ]
+        invalid_defs = [wrap(dict, default=[]), wrap(dict, default=''), wrap(dict, default={}),
+                        wrap(dict, default=None), wrap(dict, default=dict(), empty_ok=False),
+                        wrap(dict, default=None, none_ok=False),
+                        wrap(dict, default=dict(key1=1, key2=2), max_length=1),
+                       ]
+        [wrapped() for wrapped in valid_defs]
+        [self.assertRaises(AssertionError, wrapped) for wrapped in invalid_defs]
+
