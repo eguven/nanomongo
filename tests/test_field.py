@@ -2,6 +2,8 @@ import datetime
 import math
 import unittest
 
+from bson import DBRef, ObjectId
+
 from nanomongo import Field
 from nanomongo.errors import ValidationError
 
@@ -22,7 +24,7 @@ class FieldTestCase(unittest.TestCase):
 
     def test_good_types(self):
         """Test Field definitions with valid types"""
-        types = (bool, int, float, bytes, str, list, dict, datetime.datetime)
+        types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
         [Field(t) for t in types]
 
     def test_bool_field_defs(self):
@@ -120,3 +122,25 @@ class FieldTestCase(unittest.TestCase):
         [wrapped() for wrapped in valid_defs]
         [self.assertRaises(AssertionError, wrapped) for wrapped in invalid_defs]
 
+    def test_objectid_field_defs(self):
+        """Test Field definitions: ObjectId"""
+        valid_defs = [wrap(ObjectId), wrap(ObjectId, default=ObjectId),
+                      wrap(ObjectId, default=ObjectId(), none_ok=False),
+                      wrap(ObjectId, default=None, none_ok=True), wrap(ObjectId, none_ok=False),
+                     ]
+        invalid_defs = [wrap(ObjectId, default=42), wrap(ObjectId, empty_ok=True),
+                        wrap(ObjectId, max_length=12),
+                       ]
+        [wrapped() for wrapped in valid_defs]
+        [self.assertRaises(AssertionError, wrapped) for wrapped in invalid_defs]
+
+    def test_dbref_field_defs(self):
+        """Test Field definitions: DBRef"""
+        valid_defs = [wrap(DBRef), wrap(DBRef, default=DBRef('L33t',42)), wrap(DBRef, none_ok=False),
+                      wrap(DBRef, default=None, none_ok=True),
+                     ]
+        invalid_defs = [wrap(DBRef, default=42), wrap(DBRef, empty_ok=True),
+                        wrap(DBRef, max_length=12),
+                       ]
+        [wrapped() for wrapped in valid_defs]
+        [self.assertRaises(AssertionError, wrapped) for wrapped in invalid_defs]

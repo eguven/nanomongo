@@ -1,5 +1,7 @@
 import datetime
 
+from bson import DBRef, ObjectId
+
 from .errors import ValidationError
 
 class Field(object):
@@ -10,8 +12,7 @@ class Field(object):
 
     TODO: custom field validator
     """
-    # ObjectId, DBRef
-    allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime)
+    allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
     containers = (bytes, str, list, dict)
     # kwarg_name : kwarg_input_validator dictionaries
     allowed_kwargs = {'default': lambda v: True,
