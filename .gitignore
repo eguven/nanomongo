@@ -1,5 +1,7 @@
 *~
-*.pyc
+*.py[cod]
 .DS*
 cover/
+dist/
+build/
 .coverage

@@ -8,68 +8,67 @@ class Field(object):
     """Instances of this class is used to define field types and automatically
     create validators. Note that a Field definition has no value added.
 
-        field_name = Field(str, default='cheeseburger', max_length=42)
+        field_name = Field(str, default='cheeseburger')
 
     TODO: custom field validator
     """
+    # TODO: auto_now_add for datetime
     allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
-    containers = (bytes, str, list, dict)
     # kwarg_name : kwarg_input_validator dictionaries
     allowed_kwargs = {'default': lambda v: True,
-                      'none_ok': lambda v: isinstance(v, bool),
+                      'required': lambda v: isinstance(v, bool),
                      }
-    container_kwargs = {'max_length': lambda v: isinstance(v, int) and v >= 0,
-                        'empty_ok': lambda v: isinstance(v, bool),
-                       }
 
     def __init__(self, *args, **kwargs):
         """Field kwargs are checked for correctness and field validator is set
         during __init__
 
         :Keyword Arguments:
-          - `default`: default field value, must past type check
-          - `none_ok`: if ``True`` field value can be ``None`` (bool)
-          - `max_length`: maximum allowed ``len`` for the field value (``containers``) (int, long >= 0)
-          - `empty_ok`: if ``True`` field value can be empty eg. ``[]`` or ``''`` or ``{}`` (bool)
+          - `default`: default field value, must pass type check
+          - `required`: if ``True`` field must exist and not be ``None`` (default: ``True``)
         """
-        assert args, 'Field definition incorrect, please provide type'
-        assert isinstance(args[0], type), 'Field input not a type'
-        self.type_ = args[0]
-        if self.type_ not in self.allowed_types and not issubclass(self.type_, self.allowed_types):
-            raise AssertionError('Field input type %s is not allowed' % self.type_)
-        err_str = args[0].__name__ + ': %s argument not allowed or %s value invalid'
+        if not args:
+            raise TypeError('Field definition incorrect, please provide type')
+        elif not isinstance(args[0], type):
+            raise TypeError('Field input not a type')
+        self.data_type = args[0]
+        if (self.data_type not in self.allowed_types and
+            not issubclass(self.data_type, self.allowed_types)):
+            raise TypeError('Field input type %s is not allowed' % self.data_type)
+        err_str = args[0].__name__ + ': %s argument not allowed or "%s" value invalid'
         # check if Field keyword arguments are valid
         for k, v in kwargs.items():
             if k in self.allowed_kwargs:
-                assert self.allowed_kwargs[k](v), err_str % (k, v)
-            elif issubclass(self.type_, self.containers) and k in self.container_kwargs:
-                assert self.container_kwargs[k](v), err_str % (k, v)
+                if not self.allowed_kwargs[k](v):
+                    raise TypeError(err_str % (k, v))
             else:
-                raise AssertionError(err_str % (k, v))
-        self.validator = self.generate_validator(self.type_, **kwargs)
-        if 'default' in kwargs and not callable(kwargs['default']):
-            try:
-                self.validator(kwargs['default'])
-            except ValidationError as e:
-                new_err = ('default value "%s"' % kwargs['default']) + ''.join(e.args)
-                raise AssertionError(new_err)
+                raise TypeError(err_str % (k, v))
+        # attributes
+        self.validator = self.generate_validator(self.data_type, **kwargs)
+        self.required = kwargs['required'] if 'required' in kwargs else True
+        if 'default' in kwargs:
+            self.default_value = kwargs['default']
+            if not callable(self.default_value):
+                validation_failed = False
+                try:
+                    self.validator(self.default_value)
+                except ValidationError as e:
+                    new_err = ('default value "%s"' % kwargs['default']) + ''.join(e.args)
+                    validation_failed = True
+                if validation_failed:
+                    raise TypeError(new_err)
 
     def generate_validator(self, t, **kwargs):
         """Generates and returns validator function (value_to_check, field_name='').
         `field_name` kwarg is optional, used for better error reporting
         """
         def validator(val, field_name=''):
-            if val is None and 'none_ok' in kwargs and kwargs['none_ok']:
+            if val is None and 'required' in kwargs and not kwargs['required']:
                 return True
             elif val is None:
-                raise ValidationError('%s: None is not allowed' % field_name)
+                raise ValidationError('%s: None is not allowed (field required)' % field_name)
             if not isinstance(val, t):
                 raise ValidationError('%s: "%s" not an instance of %s but an instance of %s' %
                                       (field_name, val, t, type(val)))
-            if isinstance(val, self.containers):
-                if 0 == len(val) and ('empty_ok' not in kwargs or not kwargs['empty_ok']):
-                    raise ValidationError('%s: cannot be empty' % field_name)
-                elif 'max_length' in kwargs and kwargs['max_length'] < len(val):
-                    raise ValidationError('%s: %d > max_length=%d' % (field_name, len(val), kwargs['max_length']))
             return True
         return validator
