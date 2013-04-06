@@ -1,11 +1,9 @@
-import functools
 import unittest
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
-from nanomongo.errors import ValidationError, ExtraFieldError
+from nanomongo.errors import ValidationError, ExtraFieldError, ConfigurationError
 
-PYMONGO_OK = False
 try:
     import pymongo
     pymongo.MongoClient()
@@ -16,6 +14,7 @@ except:
 
 class DocumentTestCase(unittest.TestCase):
     def test_document_bad_field(self):
+        """Test document definition with bad Field def"""
 
         def bad_field():
             class Doc(BaseDocument):
@@ -28,6 +27,7 @@ class DocumentTestCase(unittest.TestCase):
         [self.assertRaises(TypeError, func) for func in (bad_field, bad_field_default)]
 
     def test_document_bad_init(self):
+        """Test incorrect document init"""
 
         class Doc(BaseDocument):
             pass
@@ -36,6 +36,9 @@ class DocumentTestCase(unittest.TestCase):
         self.assertRaises(ExtraFieldError, Doc, **{'foo': 'bar'})
 
     def test_document(self):
+        """Test document definition, initialization, setting and getting
+        attributes, validation
+        """
 
         class Doc(BaseDocument):
             bool_a, bool_b = Field(bool), Field(bool)
@@ -75,7 +78,7 @@ class DocumentTestCase(unittest.TestCase):
         self.assertRaises(ValidationError, dd.validate_all)
 
     def test_document_dir(self):
-        # check __dir__
+        """Test __dir__ functionality"""
         class Doc(BaseDocument):
             foo = Field(str)
 
@@ -92,7 +95,6 @@ class DocumentTestCase(unittest.TestCase):
 
 class ClientTestCase(unittest.TestCase):
     def test_document_cient_bad(self):
-
         def bad_client():
             class Doc(BaseDocument, client=''):
                 pass
@@ -109,6 +111,7 @@ class ClientTestCase(unittest.TestCase):
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_client(self):
+        """Pymongo: Test correct client input and document configuration"""
         client = pymongo.MongoClient()
 
         class Doc(BaseDocument, dot_notation=True, client=client, db='nanomongotest'):
@@ -129,8 +132,27 @@ class ClientTestCase(unittest.TestCase):
         self.assertEqual('nanomongotest', dd.nanomongo.database)
         self.assertEqual('doc', d.nanomongo.collection)
         self.assertEqual('othercollection', dd.nanomongo.collection)
-
         self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
+
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_document_configuration(self):
+        """Pymongo: Test document misconfiguration eg. client, db, collection"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument):
+            pass
+
+        class Doc2(BaseDocument, client=client):
+            pass
+
+        class Doc3(BaseDocument, client=client, db='nanotestdb'):  # autoset
+            pass
+
+        self.assertRaises(ConfigurationError, Doc.get_collection)
+        self.assertRaises(ConfigurationError, Doc2.get_collection)
+        Doc3.get_collection()
+        Doc3.nanomongo.collection = ''
+        self.assertRaises(ConfigurationError, Doc3.get_collection)
 
 
 class MongoDocumentTestCase(unittest.TestCase):
@@ -139,7 +161,7 @@ class MongoDocumentTestCase(unittest.TestCase):
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_save_find(self):
-        """test document save and find"""
+        """Pymongo: Test document save, find, find_one"""
         client = pymongo.MongoClient()
 
         class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
@@ -152,3 +174,6 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertRaises(ValidationError, d.save)
         d.bar = 42
         self.assertTrue(d.save())
+        self.assertEqual(0, Doc.find({'foo': 'inexistent'}).count())
+        self.assertEqual(1, Doc.find({'foo': 'foo value'}).count())
+        self.assertTrue(Doc.find_one()._id)

@@ -1,3 +1,5 @@
+from bson.objectid import ObjectId
+
 from .errors import ValidationError, ExtraFieldError, ConfigurationError
 from .field import Field
 from .util import DotNotationMixin, valid_client
@@ -92,6 +94,8 @@ class DocumentMeta(type):
             cls.nanomongo = Nanomongo.from_dicts(cls.nanomongo.fields, dct)
         else:
             cls.nanomongo = Nanomongo.from_dicts(dct)
+        if not cls.nanomongo.has_field('_id'):
+            cls.nanomongo.fields['_id'] = Field(ObjectId, required=False)
         for field_name, field_value in dct.items():
             if isinstance(field_value, Field):
                 delattr(cls, field_name)
@@ -149,11 +153,6 @@ class BaseDocument(dict, metaclass=DocumentMeta):
             else:
                 raise ExtraFieldError('Undefined field %s=%s in %s' %
                                       (field_name, kwargs[field_name], self.__class__))
-
-    @classmethod
-    def get_connection(cls):
-        """Implement to return database connection"""
-        raise NotImplementedError('Implement this classmethod to return database connection')
 
     @classmethod
     def get_collection(cls):
