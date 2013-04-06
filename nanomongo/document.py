@@ -1,12 +1,23 @@
+import pymongo
+
 from bson.objectid import ObjectId
 
-from .errors import ValidationError, ExtraFieldError, ConfigurationError
+from .errors import *
 from .field import Field
 from .util import DotNotationMixin, valid_client
 
 
 class BasesTuple(tuple):
     pass
+
+
+class Index(object):
+    """A container for clean index definition, passed to create_index as it is"""
+    def __init__(self, *args, **kwargs):
+        if not args:
+            raise TypeError('Index: key or list of key-direction tuples expected')
+        self.args = args
+        self.kwargs = kwargs
 
 
 class Nanomongo(object):
@@ -77,6 +88,10 @@ class DocumentMeta(type):
     """
 
     def __new__(cls, name, bases, dct, **kwargs):
+        if 'nanomongo' in dct:
+            raise TypeError('field name "nanomongo" is not allowed')
+        if '__indexes__' in dct and not isinstance(dct['__indexes__'], list):
+            raise TypeError('__indexes__: list of Index instances expected')
         print('PRE', bases)
         use_dot_notation = kwargs.pop('dot_notation') if 'dot_notation' in kwargs else None
         new_bases = cls._get_bases(bases)
@@ -87,7 +102,6 @@ class DocumentMeta(type):
 
     def __init__(cls, name, bases, dct, **kwargs):
         # TODO: disallow nanomongo name
-        # TODO: disallow duplicate names
         super(DocumentMeta, cls).__init__(name, bases, dct)
         print(dct, '\n')
         if hasattr(cls, 'nanomongo'):
@@ -99,6 +113,7 @@ class DocumentMeta(type):
         for field_name, field_value in dct.items():
             if isinstance(field_value, Field):
                 delattr(cls, field_name)
+        # client, database, collection
         if 'client' in kwargs:
             cls.nanomongo.set_client(kwargs['client'])
         if 'db' in kwargs:
@@ -107,6 +122,32 @@ class DocumentMeta(type):
             cls.nanomongo.set_collection(kwargs['collection'])
         else:
             cls.nanomongo.set_collection(name.lower())
+        # indexes
+        # if hasattr(cls, '__indexes__') and not hasattr(cls, 'nanomongo'):
+        #     raise TypeError('__indexes__: no fields defined, can not define indexes')
+        indexes = cls.__indexes__ if hasattr(cls, '__indexes__') else []
+
+        for index in indexes:
+            if not isinstance(index, Index):
+                raise TypeError('__indexes__: list of Index instances expected')
+            cls.ensure_index(index)
+        if hasattr(cls, '__indexes__'):
+            delattr(cls, '__indexes__')
+
+    def ensure_index(cls, index):
+        i = index.args[0]  # key or list
+        if not isinstance(i, (str, list)):
+            raise TypeError('Index: str or list of key-value tuples expected')
+        if isinstance(i, str) and not cls.nanomongo.has_field(i):
+            raise IndexMismatchError('field for index "%s" does not exist' % i)
+        elif isinstance(i, list):
+            for tup in i:
+                if not isinstance(tup, tuple) or 2 != len(tup):
+                    raise TypeError('Index: str or list of key-value tuples expected')
+                if not cls.nanomongo.has_field(tup[0]):
+                    err_str = 'field for index "%s" does not exist' % tup[0]
+                    raise IndexMismatchError(err_str)
+        return cls.nanomongo.get_collection().ensure_index(*index.args, **index.kwargs)
 
     @classmethod
     def _get_bases(cls, bases):

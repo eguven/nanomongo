@@ -8,3 +8,7 @@ class ExtraFieldError(Exception):
 
 class ConfigurationError(Exception):
     """Raised when a required value found to be not set during operation"""
+
+
+class IndexMismatchError(Exception):
+    """Raised when a defined index does not match defined fields"""
