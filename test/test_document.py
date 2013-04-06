@@ -11,6 +11,7 @@ try:
 except:
     PYMONGO_OK = False
 
+
 class DocumentTestCase(unittest.TestCase):
     def test_document_bad_field(self):
 
@@ -26,7 +27,8 @@ class DocumentTestCase(unittest.TestCase):
 
     def test_document_bad_init(self):
 
-        class Doc(BaseDocument): pass
+        class Doc(BaseDocument):
+            pass
         self.assertRaises(TypeError, Doc, *(1,))
         self.assertRaises(ExtraFieldError, Doc, *({'foo': 'bar'},))
         self.assertRaises(ExtraFieldError, Doc, **{'foo': 'bar'})
@@ -85,17 +87,21 @@ class DocumentTestCase(unittest.TestCase):
         doc_dir = sorted(dir(dir_base) + Doc.nanomongo.list_fields())
         doc2_dir = sorted(doc_dir + ['bar'])
 
+
 class ClientTestCase(unittest.TestCase):
     def test_document_cient_bad(self):
 
         def bad_client():
-            class Doc(BaseDocument, client=''): pass
+            class Doc(BaseDocument, client=''):
+                pass
 
         def bad_db():
-            class Doc(BaseDocument, db=1234): pass
+            class Doc(BaseDocument, db=1234):
+                pass
 
         def bad_col():
-            class Doc(BaseDocument, dot_notation=True, collection=3.14159265): pass
+            class Doc(BaseDocument, dot_notation=True, collection=3.14159265):
+                pass
 
         [self.assertRaises(TypeError, func) for func in (bad_client, bad_db, bad_col)]
 

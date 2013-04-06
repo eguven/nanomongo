@@ -4,6 +4,7 @@ from bson import DBRef, ObjectId
 
 from .errors import ValidationError
 
+
 class Field(object):
     """Instances of this class is used to define field types and automatically
     create validators. Note that a Field definition has no value added.
@@ -15,9 +16,10 @@ class Field(object):
     # TODO: auto_now_add for datetime
     allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
     # kwarg_name : kwarg_input_validator dictionaries
-    allowed_kwargs = {'default': lambda v: True,
-                      'required': lambda v: isinstance(v, bool),
-                     }
+    allowed_kwargs = {
+        'default': lambda v: True,
+        'required': lambda v: isinstance(v, bool),
+    }
 
     def __init__(self, *args, **kwargs):
         """Field kwargs are checked for correctness and field validator is set
@@ -32,8 +34,8 @@ class Field(object):
         elif not isinstance(args[0], type):
             raise TypeError('Field input not a type')
         self.data_type = args[0]
-        if (self.data_type not in self.allowed_types and
-            not issubclass(self.data_type, self.allowed_types)):
+        if ((self.data_type not in self.allowed_types and
+             not issubclass(self.data_type, self.allowed_types))):
             raise TypeError('Field input type %s is not allowed' % self.data_type)
         err_str = args[0].__name__ + ': %s argument not allowed or "%s" value invalid'
         # check if Field keyword arguments are valid

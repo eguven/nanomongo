@@ -2,7 +2,10 @@ from .errors import ValidationError, ExtraFieldError
 from .field import Field
 from .util import DotNotationMixin, valid_client
 
-class BasesTuple(tuple): pass
+
+class BasesTuple(tuple):
+    pass
+
 
 class Nanomongo(object):
     def __init__(self, fields=None):
@@ -80,7 +83,8 @@ class DocumentMeta(type):
         else:
             cls.nanomongo = Nanomongo.from_dicts(dct)
         for field_name, field_value in dct.items():
-            if isinstance(field_value, Field): delattr(cls, field_name)
+            if isinstance(field_value, Field):
+                delattr(cls, field_name)
         if 'client' in kwargs:
             cls.nanomongo.set_client(kwargs['client'])
         if 'db' in kwargs:
@@ -165,11 +169,3 @@ class BaseDocument(dict, metaclass=DocumentMeta):
             elif field.required:
                 raise ValidationError('required field "%s" missing' % field_name)
         return self.validate()
-
-class Doc(BaseDocument, dot_notation=True):
-    name = Field(str)
-    no = Field(int)
-
-class Doc2(Doc):
-    name = Field(str)
-    lol = Field(int, default=42)

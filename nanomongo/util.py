@@ -1,5 +1,6 @@
 import __main__
 
+
 def valid_client(client):
     """returns ``True`` if input is pymongo or motor client"""
     ok_types = ()
@@ -13,8 +14,10 @@ def valid_client(client):
             raise e
     return isinstance(client, ok_types)
 
+
 def valid_field(obj, field):
     return object.__getattribute__(obj, 'nanomongo').has_field(field)
+
 
 class DotNotationMixin(object):
     """Mixin to make dot notation available on dictionaries"""
@@ -35,7 +38,7 @@ class DotNotationMixin(object):
             return self.__getitem__(key)
         except KeyError:
             pass
-        raise AttributeError("'%s' object has no attribute '%s'" % 
+        raise AttributeError("'%s' object has no attribute '%s'" %
                              (self.__class__.__name__, key))
 
     def __getattribute__(self, key):
@@ -57,5 +60,5 @@ class DotNotationMixin(object):
         try:
             self.__delitem__(key)
         except KeyError:
-            raise AttributeError("'%s' object has no attribute '%s'" % 
+            raise AttributeError("'%s' object has no attribute '%s'" %
                                  (self.__class__.__name__, key))

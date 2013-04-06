@@ -2,6 +2,7 @@ import unittest
 
 from nanomongo import Field, Nanomongo
 
+
 class NanomongoTestCase(unittest.TestCase):
     def test_nanomongo_inits(self):
         self.assertRaises(TypeError, Nanomongo, *(1,))
