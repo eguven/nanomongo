@@ -1,6 +1,7 @@
 import unittest
 
-from nanomongo import Field, BaseDocument
+from nanomongo.field import Field
+from nanomongo.document import BaseDocument
 from nanomongo.errors import ValidationError, ExtraFieldError
 
 PYMONGO_OK = False

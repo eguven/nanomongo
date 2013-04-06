@@ -4,7 +4,7 @@ import unittest
 
 from bson import DBRef, ObjectId
 
-from nanomongo import Field
+from nanomongo.field import Field
 from nanomongo.errors import ValidationError
 
 

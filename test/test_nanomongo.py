@@ -1,6 +1,7 @@
 import unittest
 
-from nanomongo import Field, Nanomongo
+from nanomongo.field import Field
+from nanomongo.document import Nanomongo
 
 
 class NanomongoTestCase(unittest.TestCase):
