@@ -32,7 +32,7 @@ class Nanomongo(object):
 
     def list_fields(self):
         """Return a list of strings denoting fields"""
-        return list(self.fields.keys())
+        return sorted(self.fields.keys())
 
     def validate(self, field_name, value):
         """Validate field input"""
@@ -74,7 +74,7 @@ class DocumentMeta(type):
         # TODO: disallow nanomongo name
         # TODO: disallow duplicate names
         super(DocumentMeta, cls).__init__(name, bases, dct)
-        print(dct,'\n')
+        print(dct, '\n')
         if hasattr(cls, 'nanomongo'):
             cls.nanomongo = Nanomongo.from_dicts(cls.nanomongo.fields, dct)
         else:
@@ -108,7 +108,7 @@ class DocumentMeta(type):
             yield base
             for child_base in cls.__get_bases(base.__bases__):
                 yield child_base
-        
+
 
 class BaseDocument(dict, metaclass=DocumentMeta):
     """BaseDocument class. Subclasses to be used."""
@@ -117,7 +117,7 @@ class BaseDocument(dict, metaclass=DocumentMeta):
         print('ARGS:', args, 'KWARGS:', kwargs)
         # if input dict, merge (not updating) into kwargs
         if args and not isinstance(args[0], dict):
-            raise TypeError('dict or subclass argument expected')
+            raise TypeError('dict or dict subclass argument expected')
         elif args:
             for field_name, field_value in args[0].items():
                 if field_name not in kwargs:

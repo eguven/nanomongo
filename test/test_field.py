@@ -21,6 +21,7 @@ class FieldTestCase(unittest.TestCase):
 
         self.assertRaises(TypeError, Field, *(RandomClass,))
         self.assertRaises(TypeError, Field, *(TypeSubclass,))
+        self.assertRaises(TypeError, Field, *(1,))
 
     def test_good_types(self):
         """Test Field definitions with valid types"""
@@ -37,6 +38,7 @@ class FieldTestCase(unittest.TestCase):
         invalid_defs = [wrap(), wrap(bool, default=1), wrap(dict, default=None),
                         wrap(str, required=1), wrap(bytes, default=''),
                         wrap(str, default=b'', required=False),
+                        wrap(str, default='', bad_kwarg=True),
                        ]
         [wrapped() for wrapped in valid_defs]
         [self.assertRaises(TypeError, wrapped) for wrapped in invalid_defs]

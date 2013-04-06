@@ -1,7 +1,7 @@
 import unittest
 
 from nanomongo import Field, BaseDocument
-from nanomongo.errors import ValidationError
+from nanomongo.errors import ValidationError, ExtraFieldError
 
 PYMONGO_OK = False
 try:
@@ -23,6 +23,13 @@ class DocumentTestCase(unittest.TestCase):
                 foo = Field(str, default=1)
 
         [self.assertRaises(TypeError, func) for func in (bad_field, bad_field_default)]
+
+    def test_document_bad_init(self):
+
+        class Doc(BaseDocument): pass
+        self.assertRaises(TypeError, Doc, *(1,))
+        self.assertRaises(ExtraFieldError, Doc, *({'foo': 'bar'},))
+        self.assertRaises(ExtraFieldError, Doc, **{'foo': 'bar'})
 
     def test_document(self):
 
@@ -58,19 +65,39 @@ class DocumentTestCase(unittest.TestCase):
         # dd has dot_notation
         dd.zoo = [3.14159265]
         dd.validate_all()
+        dd.undefined = 'undefined field value'
+        dd.validate_all()  # passes because undefined Fields bypass __setattr__
+        dd['undefined'] = 'undefined field value'
+        self.assertRaises(ValidationError, dd.validate_all)
+
+    def test_document_dir(self):
+        # check __dir__
+        class Doc(BaseDocument):
+            foo = Field(str)
+
+        class Doc2(Doc):
+            bar = Field(str, required=False)
+
+        dir_base = BaseDocument()
+        dir_doc = Doc()
+        dir_doc2 = Doc2()
+        base_dir = dir(dir_base)
+        doc_dir = sorted(dir(dir_base) + Doc.nanomongo.list_fields())
+        doc2_dir = sorted(doc_dir + ['bar'])
 
 class ClientTestCase(unittest.TestCase):
     def test_document_cient_bad(self):
 
         def bad_client():
-            class Doc(BaseDocument, client=''):
-                pass
+            class Doc(BaseDocument, client=''): pass
 
         def bad_db():
-            class Doc(BaseDocument, db=1234):
-                pass
+            class Doc(BaseDocument, db=1234): pass
 
-        [self.assertRaises(TypeError, func) for func in (bad_client, bad_db)]
+        def bad_col():
+            class Doc(BaseDocument, dot_notation=True, collection=3.14159265): pass
+
+        [self.assertRaises(TypeError, func) for func in (bad_client, bad_db, bad_col)]
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_client(self):
@@ -96,4 +123,3 @@ class ClientTestCase(unittest.TestCase):
         self.assertEqual('othercollection', dd.nanomongo.collection)
 
         self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
-
