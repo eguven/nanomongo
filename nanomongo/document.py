@@ -1,4 +1,4 @@
-from .errors import ValidationError, ExtraFieldError
+from .errors import ValidationError, ExtraFieldError, ConfigurationError
 from .field import Field
 from .util import DotNotationMixin, valid_client
 
@@ -58,6 +58,16 @@ class Nanomongo(object):
         if not col_string or not isinstance(col_string, str):
             raise TypeError('Expected collection string')
         self.collection = col_string
+
+    def get_collection(self):
+        """Returns collection"""
+        if not self.client:
+            raise ConfigurationError('Mongo client not set')
+        elif not self.database:
+            raise ConfigurationError('db not set')
+        elif not self.collection:
+            raise ConfigurationError('collection not set')
+        return self.client[self.database][self.collection]
 
 
 class DocumentMeta(type):
@@ -147,8 +157,21 @@ class BaseDocument(dict, metaclass=DocumentMeta):
 
     @classmethod
     def get_collection(cls):
-        """Returns collection as set in `cls.nanomongo` using `cls.get_connection()`"""
-        return cls.get_connection()[cls.nanomongo.database][cls.nanomongo.collection]
+        """Returns collection as set in `cls.nanomongo`"""
+        return cls.nanomongo.get_collection()
+
+    @classmethod
+    def find(cls, *args, **kwargs):
+        """collection.find"""
+        if 'as_class' not in kwargs:
+            kwargs['as_class'] = cls
+        return cls.get_collection().find(*args, **kwargs)
+
+    @classmethod
+    def find_one(cls, *args, **kwargs):
+        if 'as_class' not in kwargs:
+            kwargs['as_class'] = cls
+        return cls.get_collection().find_one(*args, **kwargs)
 
     def __dir__(self):
         """Add defined Fields to dir"""
@@ -169,3 +192,9 @@ class BaseDocument(dict, metaclass=DocumentMeta):
             elif field.required:
                 raise ValidationError('required field "%s" missing' % field_name)
         return self.validate()
+
+    def save(self, **kwargs):
+        """Saves document, returning its `_id`"""
+        # TODO: change to use partial updates
+        self.validate_all()
+        return self.get_collection().save(self, **kwargs)

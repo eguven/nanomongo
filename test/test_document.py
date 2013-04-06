@@ -1,3 +1,4 @@
+import functools
 import unittest
 
 from nanomongo.field import Field
@@ -130,3 +131,24 @@ class ClientTestCase(unittest.TestCase):
         self.assertEqual('othercollection', dd.nanomongo.collection)
 
         self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
+
+
+class MongoDocumentTestCase(unittest.TestCase):
+    def setUp(self):
+        pymongo.MongoClient().drop_database('nanotestdb')
+
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_save_find(self):
+        """test document save and find"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
+            foo = Field(str)
+            bar = Field(int, required=False)
+
+        self.assertEqual(None, Doc.find_one())
+        d = Doc(foo='foo value')
+        d.bar = 'wrong type'
+        self.assertRaises(ValidationError, d.save)
+        d.bar = 42
+        self.assertTrue(d.save())
