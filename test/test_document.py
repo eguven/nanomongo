@@ -60,6 +60,18 @@ class DocumentTestCase(unittest.TestCase):
         dd.validate_all()
 
 class ClientTestCase(unittest.TestCase):
+    def test_document_cient_bad(self):
+
+        def bad_client():
+            class Doc(BaseDocument, client=''):
+                pass
+
+        def bad_db():
+            class Doc(BaseDocument, db=1234):
+                pass
+
+        [self.assertRaises(TypeError, func) for func in (bad_client, bad_db)]
+
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_client(self):
         client = pymongo.MongoClient()
