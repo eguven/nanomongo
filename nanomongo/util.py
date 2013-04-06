@@ -1,5 +1,18 @@
 import __main__
 
+def valid_client(client):
+    """returns ``True`` if input is pymongo or motor client"""
+    ok_types = ()
+    try:
+        import pymongo
+        ok_types += (pymongo.MongoClient, pymongo.MongoReplicaSetClient)
+        import motor
+        ok_types += (motor.MotorClient, motor.MotorReplicaSetClient)
+    except ImportError as e:
+        if not ok_types:
+            raise e
+    return isinstance(client, ok_types)
+
 def valid_field(obj, field):
     return object.__getattribute__(obj, 'nanomongo').has_field(field)
 

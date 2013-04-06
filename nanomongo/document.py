@@ -1,6 +1,6 @@
 from .errors import ValidationError, ExtraFieldError
 from .field import Field
-from .util import DotNotationMixin
+from .util import DotNotationMixin, valid_client
 
 class BasesTuple(tuple): pass
 
@@ -10,6 +10,7 @@ class Nanomongo(object):
         if not isinstance(fields, dict):
             raise TypeError('fields kwarg expected of type dict')
         self.fields = fields
+        self.client, self.database, self.collection = None, None, None
 
     @classmethod
     def from_dicts(cls, *args):
@@ -37,6 +38,24 @@ class Nanomongo(object):
         """Validate field input"""
         return self.fields[field_name].validator(value, field_name=field_name)
 
+    def set_client(self, client):
+        """Set client, a Client from pymongo or motor expected"""
+        if not valid_client(client):
+            raise TypeError('pymongo or motor Client expected')
+        self.client = client
+
+    def set_db(self, db_string):
+        """Set database, string expected"""
+        if not db_string or not isinstance(db_string, str):
+            raise TypeError('Exected database string')
+        self.database = db_string
+
+    def set_collection(self, col_string):
+        """Set collection, string expected"""
+        if not col_string or not isinstance(col_string, str):
+            raise TypeError('Expected collection string')
+        self.collection = col_string
+
 
 class DocumentMeta(type):
     """Document Metaclass. Generates allowed field set and their validators
@@ -45,10 +64,9 @@ class DocumentMeta(type):
     def __new__(cls, name, bases, dct, **kwargs):
         print('PRE', bases)
         use_dot_notation = kwargs.pop('dot_notation') if 'dot_notation' in kwargs else None
-        if use_dot_notation:
-            new_bases = (DotNotationMixin,) + cls._get_bases(bases)
-        else:
-            new_bases = cls._get_bases(bases)
+        new_bases = cls._get_bases(bases)
+        if use_dot_notation and DotNotationMixin not in new_bases:
+            new_bases = (DotNotationMixin,) + new_bases
         print('POST', new_bases)
         return super(DocumentMeta, cls).__new__(cls, name, new_bases, dct)
 
@@ -59,12 +77,18 @@ class DocumentMeta(type):
         print(dct,'\n')
         if hasattr(cls, 'nanomongo'):
             cls.nanomongo = Nanomongo.from_dicts(cls.nanomongo.fields, dct)
-
         else:
             cls.nanomongo = Nanomongo.from_dicts(dct)
         for field_name, field_value in dct.items():
             if isinstance(field_value, Field): delattr(cls, field_name)
-
+        if 'client' in kwargs:
+            cls.nanomongo.set_client(kwargs['client'])
+        if 'db' in kwargs:
+            cls.nanomongo.set_db(kwargs['db'])
+        if 'collection' in kwargs:
+            cls.nanomongo.set_collection(kwargs['collection'])
+        else:
+            cls.nanomongo.set_collection(name.lower())
 
     @classmethod
     def _get_bases(cls, bases):
@@ -111,6 +135,16 @@ class BaseDocument(dict, metaclass=DocumentMeta):
             else:
                 raise ExtraFieldError('Undefined field %s=%s in %s' %
                                       (field_name, kwargs[field_name], self.__class__))
+
+    @classmethod
+    def get_connection(cls):
+        """Implement to return database connection"""
+        raise NotImplementedError('Implement this classmethod to return database connection')
+
+    @classmethod
+    def get_collection(cls):
+        """Returns collection as set in `cls.nanomongo` using `cls.get_connection()`"""
+        return cls.get_connection()[cls.nanomongo.database][cls.nanomongo.collection]
 
     def __dir__(self):
         """Add defined Fields to dir"""

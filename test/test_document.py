@@ -3,6 +3,14 @@ import unittest
 from nanomongo import Field, BaseDocument
 from nanomongo.errors import ValidationError
 
+PYMONGO_OK = False
+try:
+    import pymongo
+    pymongo.MongoClient()
+    PYMONGO_OK = True
+except:
+    PYMONGO_OK = False
+
 class DocumentTestCase(unittest.TestCase):
     def test_document_bad_field(self):
 
@@ -50,3 +58,30 @@ class DocumentTestCase(unittest.TestCase):
         # dd has dot_notation
         dd.zoo = [3.14159265]
         dd.validate_all()
+
+class ClientTestCase(unittest.TestCase):
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_document_client(self):
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument, dot_notation=True, client=client, db='nanomongotest'):
+            foo = Field(str)
+
+        class Doc2(Doc, dot_notation=True, client=client, db='nanomongotest',
+                   collection='othercollection'):
+            bar = Field(int)
+
+        class Doc3(Doc):
+            bar = Field(float)
+
+        d = Doc()
+        dd = Doc2()
+        ddd = Doc3()
+        self.assertEqual(d.nanomongo.client, dd.nanomongo.client)
+        self.assertEqual('nanomongotest', d.nanomongo.database)
+        self.assertEqual('nanomongotest', dd.nanomongo.database)
+        self.assertEqual('doc', d.nanomongo.collection)
+        self.assertEqual('othercollection', dd.nanomongo.collection)
+
+        self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
+
