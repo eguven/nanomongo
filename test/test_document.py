@@ -274,7 +274,6 @@ class IndexTestCase(unittest.TestCase):
 
         count = 0
         for fname, func in locals().items():  # run the above defined functions
-            print(count)
             count += 1
             if 'type' in fname:
                 self.assertRaises(TypeError, func)
