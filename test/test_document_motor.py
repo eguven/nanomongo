@@ -24,7 +24,7 @@ class MotorDocumentTestCase(unittest.TestCase):
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
     @async_test_engine()
-    def test_save_find_motor(self, done):
+    def test_insert_find_motor(self, done):
         """Motor: Test document save, find, find_one"""
 
         class Doc(BaseDocument, dot_notation=True, client=MOTOR_CLIENT, db='nanotestdb'):
@@ -35,8 +35,37 @@ class MotorDocumentTestCase(unittest.TestCase):
         self.assertTrue(isinstance(col, motor.MotorCollection))
         yield AssertEqual(None, Doc.find_one, None)
         d = Doc(foo='foo value', bar=42)
-        _id = yield motor.Op(d.save)
+        _id = yield motor.Op(d.insert)
         self.assertTrue(isinstance(_id, ObjectId))
         yield AssertEqual(1, Doc.find({'foo': 'foo value'}).count, None)
         yield AssertEqual(d, Doc.find_one, {'bar': 42})
+        done()
+
+    @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @async_test_engine()
+    def test_partial_update(self, done):
+        """Motor: partial atomic update with save"""
+
+        class Doc(BaseDocument, dot_notation=True):
+            foo = Field(str)
+            bar = Field(int, required=False)
+            moo = Field(list)
+
+        Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
+
+        d = Doc(foo='foo value', bar=42)
+        d.moo = []
+        yield motor.Op(d.insert)
+        del d.bar  # unset
+        yield motor.Op(d.save)
+        yield AssertEqual(d, Doc.find_one, {'_id': d._id})
+        d.foo = 'new foo'
+        d['bar'] = 1337
+        d.moo = ['moo 0']
+        yield motor.Op(d.save, atomic=True)
+        yield AssertEqual(d, Doc.find_one, {'foo': 'new foo', 'bar': 1337})
+        d.moo = []
+        del d['bar']
+        yield motor.Op(d.save)
+        yield AssertEqual(d, Doc.find_one, {'_id': d._id})
         done()

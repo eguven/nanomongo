@@ -1,10 +1,14 @@
+import weakref
+
 import pymongo
 
 from bson.objectid import ObjectId
 
 from .errors import *
 from .field import Field
-from .util import DotNotationMixin, valid_client
+from .util import (
+    RecordingDict, DotNotationMixin, valid_client, NanomongoSONManipulator,
+)
 
 
 class BasesTuple(tuple):
@@ -26,6 +30,8 @@ class Nanomongo(object):
         if not isinstance(fields, dict):
             raise TypeError('fields kwarg expected of type dict')
         self.fields = fields
+        self.classref = None
+        self.registered = False
         self.client, self.database, self.collection = None, None, None
 
     @classmethod
@@ -64,7 +70,9 @@ class Nanomongo(object):
         """Set database, string expected"""
         if not db_string or not isinstance(db_string, str):
             raise TypeError('Exected database string')
-        self.database = db_string
+        if not self.client:
+            raise ConfigurationError('Mongo client not set')
+        self.database = self.client[db_string]
 
     def set_collection(self, col_string):
         """Set collection, string expected"""
@@ -72,15 +80,37 @@ class Nanomongo(object):
             raise TypeError('Expected collection string')
         self.collection = col_string
 
-    def get_collection(self):
-        """Returns collection"""
+    def check_config(self):
+        """Check if client, database and collection attributes are set"""
         if not self.client:
             raise ConfigurationError('Mongo client not set')
         elif not self.database:
-            raise ConfigurationError('db not set')
+            raise ConfigurationError('database not set')
         elif not self.collection:
             raise ConfigurationError('collection not set')
-        return self.client[self.database][self.collection]
+
+    def add_son_manipulator(self):
+        """add our son manipulator to transform documents coming from mongodb
+        to the class we defined, see .util.NanomongoSONManipulator
+        """
+        manipulator = NanomongoSONManipulator(self.classref())
+        self.database.add_son_manipulator(manipulator)
+
+    def register(self, client=None, db_string=None, collection=None):
+        """register the class. this is called from defined documents'
+        `register` method
+        """
+        self.set_client(client) if client else None
+        self.set_db(db_string) if db_string else None
+        self.set_collection() if collection else None
+        self.check_config()
+        self.add_son_manipulator()
+        self.registered = True
+
+    def get_collection(self):
+        """Returns collection"""
+        self.check_config()
+        return self.database[self.collection]
 
 
 class DocumentMeta(type):
@@ -92,18 +122,15 @@ class DocumentMeta(type):
             raise TypeError('field name "nanomongo" is not allowed')
         if '__indexes__' in dct and not isinstance(dct['__indexes__'], list):
             raise TypeError('__indexes__: list of Index instances expected')
-        print('PRE', bases)
         use_dot_notation = kwargs.pop('dot_notation') if 'dot_notation' in kwargs else None
         new_bases = cls._get_bases(bases)
         if use_dot_notation and DotNotationMixin not in new_bases:
             new_bases = (DotNotationMixin,) + new_bases
-        print('POST', new_bases)
         return super(DocumentMeta, cls).__new__(cls, name, new_bases, dct)
 
     def __init__(cls, name, bases, dct, **kwargs):
         # TODO: disallow nanomongo name
         super(DocumentMeta, cls).__init__(name, bases, dct)
-        print(dct, '\n')
         if hasattr(cls, 'nanomongo'):
             cls.nanomongo = Nanomongo.from_dicts(cls.nanomongo.fields, dct)
         else:
@@ -114,6 +141,7 @@ class DocumentMeta(type):
             if isinstance(field_value, Field):
                 delattr(cls, field_name)
         # client, database, collection
+        cls.nanomongo.classref = weakref.ref(cls)
         if 'client' in kwargs:
             cls.nanomongo.set_client(kwargs['client'])
         if 'db' in kwargs:
@@ -122,9 +150,13 @@ class DocumentMeta(type):
             cls.nanomongo.set_collection(kwargs['collection'])
         else:
             cls.nanomongo.set_collection(name.lower())
+        # register if nanomongo config is OK
+        try:
+            cls.nanomongo.check_config()
+            cls.nanomongo.register()
+        except ConfigurationError:
+            pass
         # indexes
-        # if hasattr(cls, '__indexes__') and not hasattr(cls, 'nanomongo'):
-        #     raise TypeError('__indexes__: no fields defined, can not define indexes')
         indexes = cls.__indexes__ if hasattr(cls, '__indexes__') else []
 
         for index in indexes:
@@ -169,11 +201,10 @@ class DocumentMeta(type):
                 yield child_base
 
 
-class BaseDocument(dict, metaclass=DocumentMeta):
+class BaseDocument(RecordingDict, metaclass=DocumentMeta):
     """BaseDocument class. Subclasses to be used."""
 
     def __init__(self, *args, **kwargs):
-        print('ARGS:', args, 'KWARGS:', kwargs)
         # if input dict, merge (not updating) into kwargs
         if args and not isinstance(args[0], dict):
             raise TypeError('dict or dict subclass argument expected')
@@ -181,19 +212,27 @@ class BaseDocument(dict, metaclass=DocumentMeta):
             for field_name, field_value in args[0].items():
                 if field_name not in kwargs:
                     kwargs[field_name] = field_value
-        print('KWARGS:', kwargs)
-        dict.__init__(self, *args, **kwargs)
+        super(BaseDocument, self).__init__()
         for field_name, field in self.nanomongo.fields.items():
             if hasattr(field, 'default_value'):
                 val = field.default_value
-                self[field_name] = val() if callable(val) else val
+                dict.__setitem__(self, field_name, val() if callable(val) else val)
         for field_name in kwargs:
             if self.nanomongo.has_field(field_name):
                 self.nanomongo.validate(field_name, kwargs[field_name])
-                self[field_name] = kwargs[field_name]
+                dict.__setitem__(self, field_name, kwargs[field_name])
             else:
                 raise ExtraFieldError('Undefined field %s=%s in %s' %
                                       (field_name, kwargs[field_name], self.__class__))
+
+    @classmethod
+    def register(cls, client=None, db=None, collection=None):
+        """Register this document. Currently sets SON manipulator"""
+        if cls.nanomongo.registered:
+            err_str = '''%s is already registered. This is automatic if you have defined
+your document class with client, db, collection.''' % cls
+            raise ConfigurationError(err_str)
+        cls.nanomongo.register(client=client, db_string=db, collection=collection)
 
     @classmethod
     def get_collection(cls):
@@ -203,14 +242,11 @@ class BaseDocument(dict, metaclass=DocumentMeta):
     @classmethod
     def find(cls, *args, **kwargs):
         """collection.find"""
-        if 'as_class' not in kwargs:
-            kwargs['as_class'] = cls
         return cls.get_collection().find(*args, **kwargs)
 
     @classmethod
     def find_one(cls, *args, **kwargs):
-        if 'as_class' not in kwargs:
-            kwargs['as_class'] = cls
+        """collection.find_one"""
         return cls.get_collection().find_one(*args, **kwargs)
 
     def __dir__(self):
@@ -233,8 +269,37 @@ class BaseDocument(dict, metaclass=DocumentMeta):
                 raise ValidationError('required field "%s" missing' % field_name)
         return self.validate()
 
+    def validate_diff(self):
+        """Check correctness of diffs before partial update"""
+        sets = self.__nanodiff__['$set']
+        unsets = self.__nanodiff__['$unset']
+        for field_name, field_value in unsets.items():
+            if self.nanomongo.has_field(field_name):
+                if self.nanomongo.fields[field_name].required:
+                    raise ValidationError('can not unset "%s", required' % field_name)
+        for field_name, field_value in sets.items():
+            if not self.nanomongo.has_field(field_name):
+                err_str = 'extra field "%s" with value "%s"'
+                raise ValidationError(err_str % (field_name, field_value))
+            field = self.nanomongo.fields[field_name]
+            field.validator(field_value, field_name=field_name)
+
+    def insert(self, **kwargs):
+        """Insert document into database (or full save), return _id"""
+        self.validate_all()
+        id_or_ids = self.get_collection().insert(self, **kwargs)
+        self.reset_diff()
+        return id_or_ids
+
     def save(self, **kwargs):
         """Saves document, returning its `_id`"""
-        # TODO: change to use partial updates
-        self.validate_all()
-        return self.get_collection().save(self, **kwargs)
+        if '_id' not in self:
+            raise ValidationError('insert first; save does partial updates')
+        if '_id' in self.__nanodiff__['$set']:
+            raise ValidationError('_id seems to be manually set, do insert')
+        self.validate_diff()
+        assert 2 == len(self.__nanodiff__), '__nanodiff__: %s' % self.__nanodiff__
+        query = {'_id': self['_id']}
+        response = self.get_collection().update(query, self.__nanodiff__, **kwargs)
+        self.reset_diff()
+        return response

@@ -6,6 +6,7 @@ from nanomongo.errors import *
 
 try:
     import pymongo
+    import bson
     pymongo.MongoClient()
     PYMONGO_OK = True
 except:
@@ -133,8 +134,8 @@ class ClientTestCase(unittest.TestCase):
         dd = Doc2()
         ddd = Doc3()
         self.assertEqual(d.nanomongo.client, dd.nanomongo.client)
-        self.assertEqual('nanomongotest', d.nanomongo.database)
-        self.assertEqual('nanomongotest', dd.nanomongo.database)
+        self.assertEqual(client['nanomongotest'], d.nanomongo.database)
+        self.assertEqual(client['nanomongotest'], dd.nanomongo.database)
         self.assertEqual('doc', d.nanomongo.collection)
         self.assertEqual('othercollection', dd.nanomongo.collection)
         self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
@@ -158,6 +159,18 @@ class ClientTestCase(unittest.TestCase):
         Doc3.get_collection()
         Doc3.nanomongo.collection = ''
         self.assertRaises(ConfigurationError, Doc3.get_collection)
+        # register
+        self.assertRaises(ConfigurationError, Doc.register)
+        self.assertRaises(ConfigurationError, Doc.register, **{'client': client})
+        self.assertRaises(TypeError, Doc.register,
+                          **{'client': client, 'db': client['nanotestdb']})
+        self.assertFalse(Doc.nanomongo.registered)
+        Doc.register(client=client, db='nanotestdb')
+        self.assertTrue(Doc.nanomongo.registered)
+        self.assertRaises(ConfigurationError, Doc.register,
+                          **{'client': client, 'db': 'nanotestdb'})
+        m_count = len(Doc.get_collection().database.outgoing_copying_manipulators)
+        self.assertEqual(1, m_count)
 
 
 class MongoDocumentTestCase(unittest.TestCase):
@@ -165,8 +178,8 @@ class MongoDocumentTestCase(unittest.TestCase):
         pymongo.MongoClient().drop_database('nanotestdb')
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
-    def test_save_find(self):
-        """Pymongo: Test document save, find, find_one"""
+    def test_insert_find(self):
+        """Pymongo: Test document insert, find, find_one"""
         client = pymongo.MongoClient()
 
         class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
@@ -176,17 +189,51 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertEqual(None, Doc.find_one())
         d = Doc(foo='foo value')
         d.bar = 'wrong type'
-        self.assertRaises(ValidationError, d.save)
+        self.assertRaises(ValidationError, d.insert)
         d.bar = 42
-        self.assertTrue(d.save())
+        self.assertTrue(d.insert())
         self.assertEqual(0, Doc.find({'foo': 'inexistent'}).count())
         self.assertEqual(1, Doc.find({'foo': 'foo value'}).count())
-        self.assertTrue(Doc.find_one()._id)
+        self.assertEqual(d, Doc.find_one())
+
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_partial_update(self):
+        """Pymongo: Test partial atomic update with save"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
+            foo = Field(str)
+            bar = Field(int, required=False)
+            moo = Field(list)
+
+        d = Doc(foo='foo value', bar=42)
+        self.assertRaises(ValidationError, d.save)  # no _id yet
+        d['_id'] = bson.objectid.ObjectId()
+        self.assertRaises(ValidationError, d.save)  # _id manually set
+        self.assertRaises(ValidationError, d.insert)  # missing field moo
+        d.moo = []
+        self.assertEqual(d._id, d.insert())
+        del d.bar  # unset
+        d.save()
+        self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        d.foo = 'new foo'
+        d['bar'] = 1337
+        d.moo = ['moo 0']
+        d.save(atomic=True)
+        self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        d.moo = []
+        del d['bar']
+        d.save()
+        self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        d.bar = 'wrong type'
+        self.assertRaises(ValidationError, d.save)
+        self.assertRaises(ValidationError, d.insert)
 
 
 class IndexTestCase(unittest.TestCase):
     def setUp(self):
-        pymongo.MongoClient().drop_database('nanotestdb')
+        if PYMONGO_OK:
+            pymongo.MongoClient().drop_database('nanotestdb')
 
     def test_index_definitions_bad(self):
 
