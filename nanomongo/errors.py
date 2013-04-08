@@ -7,7 +7,9 @@ class ExtraFieldError(Exception):
 
 
 class ConfigurationError(Exception):
-    """Raised when a required value found to be not set during operation"""
+    """Raised when a required value found to be not set during
+    operation, or a Document class is registered more than once
+    """
 
 
 class IndexMismatchError(Exception):
