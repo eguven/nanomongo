@@ -32,6 +32,13 @@ class RecordingDict(dict):
 
     def __setitem__(self, key, value):
         """Override `__setitem__ so we can track changes`"""
+        try:
+            skip = self[key] == value
+        except KeyError:
+            skip = False
+        if skip:
+            return
+        value = RecordingDict(value) if isinstance(value, dict) else value
         super(RecordingDict, self).__setitem__(key, value)
         self.__nanodiff__['$set'][key] = value
 
@@ -43,8 +50,28 @@ class RecordingDict(dict):
             del self.__nanodiff__['$set'][key]  # remove previous $set if any
 
     def reset_diff(self):
-        """reset `__nanodiff__` to be used after saving diffs"""
-        self.__nanodiff__ = {'$set': {}, '$unset': {}}
+        """reset `__nanodiff__` recursively; to be used after saving diffs"""
+        nanodiff_base = {'$set': {}, '$unset': {}}
+        self.__nanodiff__ = nanodiff_base
+        for field_name, field_value in self.items():
+            if isinstance(field_value, RecordingDict):
+                field_value.reset_diff()
+
+    def get_sub_diff(self):
+        """get `__nanodiff__` from embedded documents"""
+        diff = {'$set': {}, '$unset': {}}
+        # find RecordingDict fields. iterate and build dotted keys for top level diff
+        for field_name, field_value in self.items():
+            if isinstance(field_value, RecordingDict):
+                sets = field_value.__nanodiff__['$set']
+                unsets = field_value.__nanodiff__['$unset']
+                for k, v in sets.items():
+                    dotkey = '%s.%s' % (field_name, k)
+                    diff['$set'][dotkey] = v
+                for k, v in unsets.items():
+                    dotkey = '%s.%s' % (field_name, k)
+                    diff['$unset'][dotkey] = v
+        return diff
 
 
 class DotNotationMixin(object):

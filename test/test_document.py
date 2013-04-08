@@ -113,7 +113,12 @@ class ClientTestCase(unittest.TestCase):
             class Doc(BaseDocument, dot_notation=True, collection=3.14159265):
                 pass
 
+        def db_before_client():
+            class Doc(BaseDocument, db='nanomongotest'):
+                pass
+
         [self.assertRaises(TypeError, func) for func in (bad_client, bad_db, bad_col)]
+        self.assertRaises(ConfigurationError, db_before_client)
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_client(self):
@@ -225,9 +230,40 @@ class MongoDocumentTestCase(unittest.TestCase):
         del d['bar']
         d.save()
         self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        d['extra_field'] = 'fail'
+        self.assertRaises(ValidationError, d.save)
+        del d['extra_field']
+        d.save()
         d.bar = 'wrong type'
         self.assertRaises(ValidationError, d.save)
         self.assertRaises(ValidationError, d.insert)
+
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_sub_diff(self):
+        """Test embedded document diff"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
+            foo = Field(str)
+            bar = Field(dict)
+
+        d = Doc()
+        d.foo = 'foo value'
+        d.bar = {'sub_a': 'a', 'sub_b': 'b'}
+        d.insert()
+        self.assertEqual(d, Doc.find_one())
+        d.foo = 'foo value'
+        d.bar['sub_b'] = 'b'  # no change, update will return None
+        self.assertEqual(None, d.save())
+        d.bar = {'sub_a': 'a', 'sub_b': 'b'}
+        self.assertEqual(None, d.save())
+        del d.bar['sub_a']
+        d.bar['sub_c'] = 'c'
+        d.foo = 'new foo'
+        d.save()
+        expected = {'_id': d._id, 'foo': 'new foo',
+                    'bar': {'sub_b': 'b', 'sub_c': 'c'}}
+        self.assertTrue(expected == d == Doc.find_one())
 
 
 class IndexTestCase(unittest.TestCase):

@@ -58,6 +58,30 @@ class RecordingDictTestCase(unittest.TestCase):
         del d['foo']
         self.assertEqual({'$set': {}, '$unset': {'foo': 1}}, d.__nanodiff__)
 
+    def test_sub_diff(self):
+        """Test functionality of sub_diff for embedded documents"""
+        class Doc(RecordingDict):
+            pass
+
+        nanodiff_base = {'$set': {}, '$unset': {}}
+        d = Doc()
+        self.assertEqual(nanodiff_base, d.__nanodiff__)
+        d['sub'] = Doc()
+        self.assertEqual({'$set': {'sub': {}}, '$unset': {}}, d.__nanodiff__)
+        d.reset_diff()
+        d['sub']['foo'] = 42
+        self.assertEqual(nanodiff_base, d.__nanodiff__)  # no diff on top level
+        self.assertEqual({'$set': {'foo': 42}, '$unset': {}}, d['sub'].__nanodiff__)
+        subdiff = d.get_sub_diff()
+        self.assertEqual({'$set': {'sub.foo': 42}, '$unset': {}}, subdiff)
+        del d['sub']['foo']
+        d['sub']['bar'] = 1337
+        expected = {'$set': {'sub.bar': 1337}, '$unset': {'sub.foo': 1}}
+        self.assertEqual(expected, d.get_sub_diff())
+        d.reset_diff()
+        d['sub']['bar'] = 1337  # same value set
+        self.assertEqual(nanodiff_base, d.get_sub_diff())
+
 
 class MixinTestCase(unittest.TestCase):
     def test_mixin(self):

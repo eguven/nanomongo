@@ -224,6 +224,10 @@ class BaseDocument(RecordingDict, metaclass=DocumentMeta):
             else:
                 raise ExtraFieldError('Undefined field %s=%s in %s' %
                                       (field_name, kwargs[field_name], self.__class__))
+        for field_name, field_value in self.items():
+            # transform dict to RecordingDict so we can track diff in embedded docs
+            if isinstance(field_value, dict):
+                dict.__setitem__(self, field_name, RecordingDict(field_value))
 
     @classmethod
     def register(cls, client=None, db=None, collection=None):
@@ -289,6 +293,9 @@ your document class with client, db, collection.''' % cls
         self.validate_all()
         id_or_ids = self.get_collection().insert(self, **kwargs)
         self.reset_diff()
+        for field_name, field_value in self.items():
+            if isinstance(field_value, dict):  # cast dicts
+                field_value = RecordingDict(field_value)
         return id_or_ids
 
     def save(self, **kwargs):
@@ -300,6 +307,13 @@ your document class with client, db, collection.''' % cls
         self.validate_diff()
         assert 2 == len(self.__nanodiff__), '__nanodiff__: %s' % self.__nanodiff__
         query = {'_id': self['_id']}
-        response = self.get_collection().update(query, self.__nanodiff__, **kwargs)
+        diff = self.__nanodiff__
+        # get subdiff containing dotted keys, merge into diff
+        subdiff = self.get_sub_diff()
+        diff['$set'].update(subdiff['$set'])
+        diff['$unset'].update(subdiff['$unset'])
+        if not diff['$set'] and not diff['$unset']:
+            return
+        response = self.get_collection().update(query, diff, **kwargs)
         self.reset_diff()
         return response
