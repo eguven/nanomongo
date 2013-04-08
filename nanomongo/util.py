@@ -2,6 +2,8 @@ import __main__
 
 import pymongo
 
+from .errors import ExtraFieldError
+
 
 def valid_client(client):
     """returns ``True`` if input is pymongo or motor client"""
@@ -25,12 +27,11 @@ class RecordingDict(dict):
     """A dictionary subclass modifying `__setitem__` and `__delitem__`
     methods to record changes in its `__nanodiff__` attribute"""
     def __init__(self, *args, **kwargs):
-        dict.__init__(self, *args, **kwargs)
+        super(RecordingDict, self).__init__(*args, **kwargs)
         self.__nanodiff__ = {'$set': {}, '$unset': {}}
 
     def __setitem__(self, key, value):
         """Override `__setitem__ so we can track changes`"""
-        #print(key, value) if not self else None
         super(RecordingDict, self).__setitem__(key, value)
         self.__nanodiff__['$set'][key] = value
 
@@ -108,4 +109,7 @@ class NanomongoSONManipulator(pymongo.son_manipulator.SONManipulator):
         return True
 
     def transform_outgoing(self, son, collection):
-        return self.as_class(son)
+        try:
+            return self.as_class(son)
+        except ExtraFieldError:
+            return son

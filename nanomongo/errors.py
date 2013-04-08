@@ -1,16 +1,20 @@
-class ValidationError(Exception):
+class NanomongoError(Exception):
+    """Base nanomongo error"""
+
+
+class ValidationError(NanomongoError):
     """Raised when a field fails validation"""
 
 
-class ExtraFieldError(Exception):
+class ExtraFieldError(NanomongoError):
     """Raised when a document has an undefined field"""
 
 
-class ConfigurationError(Exception):
+class ConfigurationError(NanomongoError):
     """Raised when a required value found to be not set during
     operation, or a Document class is registered more than once
     """
 
 
-class IndexMismatchError(Exception):
+class IndexMismatchError(NanomongoError):
     """Raised when a defined index does not match defined fields"""
