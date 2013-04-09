@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 from nanomongo.field import Field
@@ -264,6 +265,25 @@ class MongoDocumentTestCase(unittest.TestCase):
         expected = {'_id': d._id, 'foo': 'new foo',
                     'bar': {'sub_b': 'b', 'sub_c': 'c'}}
         self.assertTrue(expected == d == Doc.find_one())
+
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_auto_update(self):
+        """Test auto_update keyword workings"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
+            foo = Field(str)
+            bar = Field(datetime.datetime, auto_update=True)
+            moo = Field(int, required=False)
+
+        dt = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+        d = Doc(foo='foo value', bar=dt)
+        d.insert()
+        self.assertTrue(datetime.timedelta(hours=1) < d.bar - dt)
+        d.moo = 42
+        dt_after_insert = d.bar
+        d.save()
+        self.assertNotEqual(d.bar, dt_after_insert)
 
 
 class IndexTestCase(unittest.TestCase):

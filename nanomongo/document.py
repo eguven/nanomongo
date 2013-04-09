@@ -33,6 +33,10 @@ class Nanomongo(object):
         self.classref = None
         self.registered = False
         self.client, self.database, self.collection = None, None, None
+        self.transforms = {}  # save auto_update fields so we don't keep looping
+        for field_name, field in self.fields.items():
+            if hasattr(field, 'auto_update'):
+                self.transforms[field_name] = field.auto_update
 
     @classmethod
     def from_dicts(cls, *args):
@@ -288,8 +292,16 @@ your document class with client, db, collection.''' % cls
             field = self.nanomongo.fields[field_name]
             field.validator(field_value, field_name=field_name)
 
+    def run_auto_updates(self):
+        """Runs functions in `self.nanomongo.transforms` like
+        auto_update stuff before `save`
+        """
+        for field_name, updater in self.nanomongo.transforms.items():
+            self[field_name] = updater()
+
     def insert(self, **kwargs):
         """Insert document into database (or full save), return _id"""
+        self.run_auto_updates()
         self.validate_all()
         id_or_ids = self.get_collection().insert(self, **kwargs)
         self.reset_diff()
@@ -304,6 +316,7 @@ your document class with client, db, collection.''' % cls
             raise ValidationError('insert first; save does partial updates')
         if '_id' in self.__nanodiff__['$set']:
             raise ValidationError('_id seems to be manually set, do insert')
+        self.run_auto_updates()
         self.validate_diff()
         assert 2 == len(self.__nanodiff__), '__nanodiff__: %s' % self.__nanodiff__
         query = {'_id': self['_id']}

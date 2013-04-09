@@ -40,12 +40,14 @@ class FieldTestCase(unittest.TestCase):
             wrap(bool, default=True), wrap(bool, default=False),
             wrap(str, default='L33t'), wrap(list, default=[]),
             wrap(str, default=None, required=False),
+            wrap(datetime.datetime, auto_update=True),
         ]
         invalid_defs = [
             wrap(), wrap(bool, default=1), wrap(dict, default=None),
             wrap(str, required=1), wrap(bytes, default=''),
             wrap(str, default=b'', required=False),
-            wrap(str, default='', bad_kwarg=True),
+            wrap(str, default='', bad_kwarg=True), wrap(int, auto_update=True),
+            wrap(datetime.datetime, auto_update='bad value'),
         ]
         [wrapped() for wrapped in valid_defs]
         [self.assertRaises(TypeError, wrapped) for wrapped in invalid_defs]

@@ -20,6 +20,9 @@ class Field(object):
         'default': lambda v: True,
         'required': lambda v: isinstance(v, bool),
     }
+    extra_kwargs = {
+        datetime.datetime: {'auto_update': lambda v: isinstance(v, bool)}
+    }
 
     def __init__(self, *args, **kwargs):
         """Field kwargs are checked for correctness and field validator is set
@@ -28,6 +31,7 @@ class Field(object):
         :Keyword Arguments:
           - `default`: default field value, must pass type check
           - `required`: if ``True`` field must exist and not be ``None`` (default: ``True``)
+          - `auto_update`: valid for datetime fields (default: ``False``)
         """
         if not args:
             raise TypeError('Field definition incorrect, please provide type')
@@ -37,15 +41,10 @@ class Field(object):
         if ((self.data_type not in self.allowed_types and
              not issubclass(self.data_type, self.allowed_types))):
             raise TypeError('Field input type %s is not allowed' % self.data_type)
-        err_str = args[0].__name__ + ': %s argument not allowed or "%s" value invalid'
-        # check if Field keyword arguments are valid
-        for k, v in kwargs.items():
-            if k in self.allowed_kwargs:
-                if not self.allowed_kwargs[k](v):
-                    raise TypeError(err_str % (k, v))
-            else:
-                raise TypeError(err_str % (k, v))
+        self.check_kwargs(kwargs, self.data_type)
         # attributes
+        if 'auto_update' in kwargs and kwargs['auto_update']:
+            self.auto_update = self.data_type.utcnow  # datetime.datetime
         self.validator = self.generate_validator(self.data_type, **kwargs)
         self.required = kwargs['required'] if 'required' in kwargs else True
         if 'default' in kwargs:
@@ -59,6 +58,24 @@ class Field(object):
                     validation_failed = True
                 if validation_failed:
                     raise TypeError(new_err)
+
+    @classmethod
+    def check_kwargs(cls, kwargs, data_type):
+        """Check keyword arguments & their values given to `Field`
+        constructor such as: default, required ...
+        """
+        err_str = data_type.__name__ + ': %s argument not allowed or "%s" value invalid'
+        for k, v in kwargs.items():
+            # kwargs allowed for all data_types
+            if k in cls.allowed_kwargs:
+                if not cls.allowed_kwargs[k](v):  # run kwarg validator
+                    raise TypeError(err_str % (k, v))
+            # type specific kwargs
+            elif data_type in cls.extra_kwargs and k in cls.extra_kwargs[data_type]:
+                if not cls.extra_kwargs[data_type][k](v):  # run kwarg validator
+                    raise TypeError(err_str % (k, v))
+            else:
+                raise TypeError(err_str % (k, v))
 
     def generate_validator(self, t, **kwargs):
         """Generates and returns validator function (value_to_check, field_name='').
