@@ -51,3 +51,12 @@ class FieldTestCase(unittest.TestCase):
         ]
         [wrapped() for wrapped in valid_defs]
         [self.assertRaises(TypeError, wrapped) for wrapped in invalid_defs]
+
+    def test_field_validators(self):
+        """Test some validators"""
+        bad_dicts = [
+            {'foo.bar': 42}, {'$foo': 42}, {'foo': {'bar.foo': 42}},
+            {'foo': {'$bar': 42}},
+        ]
+        for dct in bad_dicts:
+            self.assertRaises(ValidationError, Field(dict).validator, *(dct,))

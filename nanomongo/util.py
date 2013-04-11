@@ -2,7 +2,7 @@ import __main__
 
 import pymongo
 
-from .errors import ExtraFieldError
+from .errors import ExtraFieldError, ValidationError
 
 
 def valid_client(client):
@@ -21,6 +21,23 @@ def valid_client(client):
 
 def valid_field(obj, field):
     return object.__getattribute__(obj, 'nanomongo').has_field(field)
+
+
+def check_keys(dct):
+    """Recursively check against '.' and '$' at start position in
+    dictionary keys
+    """
+    if not isinstance(dct, dict):
+        raise TypeError('dict-like argument expected')
+    dot_err_str = 'MongoDB does not allow . in field names. "%s"'
+    dollar_err_str = 'MongoDB does not allow fields starting with $. "%s"'
+    for k, v in dct.items():
+        if '.' in k:
+            raise ValidationError(dot_err_str % k)
+        elif k.startswith('$'):
+            raise ValidationError(dollar_err_str % k)
+        elif isinstance(v, dict):
+            check_keys(v)
 
 
 class RecordingDict(dict):
@@ -58,9 +75,11 @@ class RecordingDict(dict):
                 field_value.reset_diff()
 
     def get_sub_diff(self):
-        """get `__nanodiff__` from embedded documents"""
+        """get `__nanodiff__` from embedded documents. Find fields of
+        `RecordingDict` type, iterate over their diff and build dotted
+        keys for top level diff
+        """
         diff = {'$set': {}, '$unset': {}}
-        # find RecordingDict fields. iterate and build dotted keys for top level diff
         for field_name, field_value in self.items():
             if isinstance(field_value, RecordingDict):
                 sets = field_value.__nanodiff__['$set']

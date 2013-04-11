@@ -3,6 +3,7 @@ import datetime
 from bson import DBRef, ObjectId
 
 from .errors import ValidationError
+from .util import check_keys
 
 
 class Field(object):
@@ -89,5 +90,7 @@ class Field(object):
             if not isinstance(val, t):
                 raise ValidationError('%s: "%s" not an instance of %s but an instance of %s' %
                                       (field_name, val, t, type(val)))
+            if isinstance(val, dict):
+                check_keys(val)  # check against . & $ in keys
             return True
         return validator

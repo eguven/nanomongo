@@ -3,8 +3,9 @@ import unittest
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
 from nanomongo.util import (
-    DotNotationMixin, valid_field, valid_client, RecordingDict,
+    DotNotationMixin, valid_field, valid_client, RecordingDict, check_keys,
 )
+from nanomongo.errors import ValidationError
 
 try:
     import pymongo
@@ -33,6 +34,13 @@ class HelperFuncionsTestCase(unittest.TestCase):
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
     def test_valid_client_motor(self):
         self.assertTrue(valid_client(MOTOR_CLIENT))
+
+    def test_check_keys(self):
+        bad_dicts = [
+            {'foo.bar': 42}, {'$foo': 42}, {'foo': {'bar.foo': 42}},
+            {'foo': {'$bar': 42}},
+        ]
+        [self.assertRaises(ValidationError, check_keys, *(dct,)) for dct in bad_dicts]
 
 
 class RecordingDictTestCase(unittest.TestCase):

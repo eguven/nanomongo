@@ -42,6 +42,11 @@ class DocumentTestCase(unittest.TestCase):
         self.assertRaises(ExtraFieldError, Doc, *({'foo': 'bar'},))
         self.assertRaises(ExtraFieldError, Doc, **{'foo': 'bar'})
 
+        class NewDoc(Doc):
+            foo = Field(dict)
+        self.assertRaises(ValidationError, NewDoc, *({'foo': {'$bar': 42}},))
+        self.assertRaises(ValidationError, NewDoc, **{'foo': {'bar.foo': 42}})
+
     def test_document(self):
         """Test document definition, initialization, setting and getting
         attributes, validation

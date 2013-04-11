@@ -133,7 +133,6 @@ class DocumentMeta(type):
         return super(DocumentMeta, cls).__new__(cls, name, new_bases, dct)
 
     def __init__(cls, name, bases, dct, **kwargs):
-        # TODO: disallow nanomongo name
         super(DocumentMeta, cls).__init__(name, bases, dct)
         if hasattr(cls, 'nanomongo'):
             cls.nanomongo = Nanomongo.from_dicts(cls.nanomongo.fields, dct)
