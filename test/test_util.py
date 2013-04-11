@@ -50,41 +50,41 @@ class RecordingDictTestCase(unittest.TestCase):
             pass
 
         d = Doc()
-        nanodiff_base = {'$set': {}, '$unset': {}}
+        nanodiff_base = {'$set': {}, '$unset': {}, '$addToSet': {}}
         self.assertEqual(nanodiff_base, d.__nanodiff__)
         d.foo = 42
         self.assertEqual(nanodiff_base, d.__nanodiff__)
         d['foo'] = 42
-        self.assertEqual({'$set': {'foo': 42}, '$unset': {}}, d.__nanodiff__)
+        self.assertEqual({'$set': {'foo': 42}, '$unset': {}, '$addToSet': {}}, d.__nanodiff__)
         d['foo'] = 1337
-        self.assertEqual({'$set': {'foo': 1337}, '$unset': {}}, d.__nanodiff__)
+        self.assertEqual({'$set': {'foo': 1337}, '$unset': {}, '$addToSet': {}}, d.__nanodiff__)
         d.reset_diff()
         self.assertEqual(nanodiff_base, d.__nanodiff__)
         d = Doc(foo=42)
         self.assertEqual(nanodiff_base, d.__nanodiff__)
         self.assertEqual(42, d['foo'])
         del d['foo']
-        self.assertEqual({'$set': {}, '$unset': {'foo': 1}}, d.__nanodiff__)
+        self.assertEqual({'$set': {}, '$unset': {'foo': 1}, '$addToSet': {}}, d.__nanodiff__)
 
     def test_sub_diff(self):
         """Test functionality of sub_diff for embedded documents"""
         class Doc(RecordingDict):
             pass
 
-        nanodiff_base = {'$set': {}, '$unset': {}}
+        nanodiff_base = {'$set': {}, '$unset': {}, '$addToSet': {}}
         d = Doc()
         self.assertEqual(nanodiff_base, d.__nanodiff__)
         d['sub'] = Doc()
-        self.assertEqual({'$set': {'sub': {}}, '$unset': {}}, d.__nanodiff__)
+        self.assertEqual({'$set': {'sub': {}}, '$unset': {}, '$addToSet': {}}, d.__nanodiff__)
         d.reset_diff()
         d['sub']['foo'] = 42
         self.assertEqual(nanodiff_base, d.__nanodiff__)  # no diff on top level
-        self.assertEqual({'$set': {'foo': 42}, '$unset': {}}, d['sub'].__nanodiff__)
+        self.assertEqual({'$set': {'foo': 42}, '$unset': {}, '$addToSet': {}}, d['sub'].__nanodiff__)
         subdiff = d.get_sub_diff()
-        self.assertEqual({'$set': {'sub.foo': 42}, '$unset': {}}, subdiff)
+        self.assertEqual({'$set': {'sub.foo': 42}, '$unset': {}, '$addToSet': {}}, subdiff)
         del d['sub']['foo']
         d['sub']['bar'] = 1337
-        expected = {'$set': {'sub.bar': 1337}, '$unset': {'sub.foo': 1}}
+        expected = {'$set': {'sub.bar': 1337}, '$unset': {'sub.foo': 1}, '$addToSet': {}}
         self.assertEqual(expected, d.get_sub_diff())
         d.reset_diff()
         d['sub']['bar'] = 1337  # same value set

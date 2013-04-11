@@ -317,14 +317,15 @@ your document class with client, db, collection.''' % cls
             raise ValidationError('_id seems to be manually set, do insert')
         self.run_auto_updates()
         self.validate_diff()
-        assert 2 == len(self.__nanodiff__), '__nanodiff__: %s' % self.__nanodiff__
+        assert 3 == len(self.__nanodiff__), '__nanodiff__: %s' % self.__nanodiff__
         query = {'_id': self['_id']}
         diff = self.__nanodiff__
         # get subdiff containing dotted keys, merge into diff
         subdiff = self.get_sub_diff()
         diff['$set'].update(subdiff['$set'])
         diff['$unset'].update(subdiff['$unset'])
-        if not diff['$set'] and not diff['$unset']:
+        diff['$addToSet'].update(subdiff['$addToSet'])
+        if not diff['$set'] and not diff['$unset'] and not diff['$addToSet']:
             return
         response = self.get_collection().update(query, diff, **kwargs)
         self.reset_diff()

@@ -45,7 +45,9 @@ class RecordingDict(dict):
     methods to record changes in its `__nanodiff__` attribute"""
     def __init__(self, *args, **kwargs):
         super(RecordingDict, self).__init__(*args, **kwargs)
-        self.__nanodiff__ = {'$set': {}, '$unset': {}}
+        self.__nanodiff__ = {
+            '$set': {}, '$unset': {}, '$addToSet': {},
+        }
 
     def __setitem__(self, key, value):
         """Override `__setitem__ so we can track changes`"""
@@ -67,8 +69,10 @@ class RecordingDict(dict):
             del self.__nanodiff__['$set'][key]  # remove previous $set if any
 
     def reset_diff(self):
-        """reset `__nanodiff__` recursively; to be used after saving diffs"""
-        nanodiff_base = {'$set': {}, '$unset': {}}
+        """reset `__nanodiff__` recursively; to be used after saving
+        diffs. This does NOT do a rollback. Reload from db for that
+        """
+        nanodiff_base = {'$set': {}, '$unset': {}, '$addToSet': {}}
         self.__nanodiff__ = nanodiff_base
         for field_name, field_value in self.items():
             if isinstance(field_value, RecordingDict):
@@ -79,17 +83,21 @@ class RecordingDict(dict):
         `RecordingDict` type, iterate over their diff and build dotted
         keys for top level diff
         """
-        diff = {'$set': {}, '$unset': {}}
+        diff = {'$set': {}, '$unset': {}, '$addToSet': {}}
         for field_name, field_value in self.items():
             if isinstance(field_value, RecordingDict):
                 sets = field_value.__nanodiff__['$set']
                 unsets = field_value.__nanodiff__['$unset']
+                addtosets = field_value.__nanodiff__['$addToSet']
                 for k, v in sets.items():
                     dotkey = '%s.%s' % (field_name, k)
                     diff['$set'][dotkey] = v
                 for k, v in unsets.items():
                     dotkey = '%s.%s' % (field_name, k)
                     diff['$unset'][dotkey] = v
+                for k, v in addtosets.items():
+                    dotkey = '%s.%s' % (field_name, k)
+                    diff['$addToSet'][dotkey] = v
         return diff
 
 
