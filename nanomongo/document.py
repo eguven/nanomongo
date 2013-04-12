@@ -330,3 +330,59 @@ your document class with client, db, collection.''' % cls
         response = self.get_collection().update(query, diff, **kwargs)
         self.reset_diff()
         return response
+
+    def addToSet(self, field, value):
+        """MongoDB `collection.update` with $addToSet. This sets the
+        value accordingly and records the change in `__nanodiff__` to
+        be saved with `BaseDocument.save`.
+
+        Contrary to how $set fails silently under __setitem__ when the
+        new value is equal to the current; $addToSet explicitly adds
+        the call to `__nanodiff__` so it will be sent to DB when `save`
+        is called.
+        """
+        def top_level_add(self, field, value):
+            """add the value to field. appending if the list exists and
+            does not contain the value; create new list otherwise.
+            raise `ValidationError` if non-list value initiated
+            """
+            if field in self and isinstance(self[field], list):
+                if value not in self[field]:
+                    self[field].append(value)
+            elif field not in self or self[field] is None:
+                dict.__setitem__(self, field, [value])  # to avoid $set record
+            else:
+                err_str = 'Could not $addToSet on valid field, bad init? : "%s"'
+                raise ValidationError(err_str % self[field])
+            # record in __nanodiff__
+            # if '$addToSet' not in self.__nanodiff__:
+            #     self.__nanodiff__['$addToSet'] = {}
+            if field not in self.__nanodiff__['$addToSet']:
+                self.__nanodiff__['$addToSet'][field] = {'$each': [value]}
+            elif value not in self.__nanodiff__['$addToSet'][field]['$each']:
+                self.__nanodiff__['$addToSet'][field]['$each'].append(value)
+
+        if field.startswith('$') or '.$' in field:
+            err_str = 'MongoDB does not allow fields starting with $. "%s"'
+            raise ValidationError(err_str % field)
+        # if top-level
+        if '.' not in field:
+            if ((self.nanomongo.has_field(field) and
+                 list == self.nanomongo.fields[field].data_type)):
+                top_level_add(self, field, value)  # add & record
+            else:
+                err_str = 'Cannot apply $addToSet modifier to non-array: %s=%s'
+                raise ValidationError(err_str % (field, self[field]))
+        # if deep-level
+        else:
+            try:
+                top_key, deep_key = field.split('.')
+            except ValueError:
+                err_str = '''Only top level and one level deep keus supported for \
+$addToSet: "%s"'''
+                raise UnsupportedOperation(err_str, field)
+            # field name ok, ensure top level value is RecordingDict
+            if not isinstance(self[top_key], RecordingDict):
+                err_str = '''Dotted key's target is not a dict: %s=%s'''
+                raise ValidationError(err_str % (top_key, self[top_key]))
+            top_level_add(self[top_key], deep_key, value)  # add & record

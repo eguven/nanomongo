@@ -18,3 +18,7 @@ class ConfigurationError(NanomongoError):
 
 class IndexMismatchError(NanomongoError):
     """Raised when a defined index does not match defined fields"""
+
+
+class UnsupportedOperation(NanomongoError):
+    """Raised when an unsupported opperation/parameters are used"""

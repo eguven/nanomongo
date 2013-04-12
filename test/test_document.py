@@ -1,3 +1,4 @@
+import copy
 import datetime
 import unittest
 
@@ -243,6 +244,41 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.bar = 'wrong type'
         self.assertRaises(ValidationError, d.save)
         self.assertRaises(ValidationError, d.insert)
+
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_partial_update_addToSet(self):
+        """Pymongo: addToSet functionality with `save`"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
+            foo = Field(list)
+            bar = Field(dict)
+            moo = Field(str)
+
+        d = Doc(foo=['foo_1', 'foo_2'], bar={'1': 'bar_1', '2': []}, moo='moo val')
+        d.insert()
+        self.assertRaises(ValidationError, d.addToSet, *('moo', 1))
+        self.assertRaises(UnsupportedOperation, d.addToSet, *('bar.a.b', 42))
+        d.addToSet('foo', 'foo_1')
+        d.moo = 'new moo'
+        d.addToSet('foo', 'foo_3')
+        d.addToSet('foo', 'foo_1')
+        d.addToSet('bar.2', 'L33t')
+        d.addToSet('bar.3', 'new_1')
+        d.addToSet('bar.3', 'new_1')
+        d.addToSet('bar.3', 'new_2')
+        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 1))
+        topdiff = {'$set': {'moo': 'new moo'}, '$unset': {},
+                   '$addToSet': {'foo': {'$each': ['foo_1', 'foo_3']}}}
+        subdiff = {'$set': {}, '$unset': {},
+                   '$addToSet': {'2': {'$each': ['L33t']},
+                                 '3': {'$each': ['new_1', 'new_2']}}}
+        self.assertEqual(topdiff, d.__nanodiff__)
+        self.assertEqual(subdiff, d.bar.__nanodiff__)
+        d_copy = copy.deepcopy(d)
+        d.save()
+        d_db = Doc.find_one()
+        self.assertTrue(d_copy == d == d_db)
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_sub_diff(self):
