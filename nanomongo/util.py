@@ -60,6 +60,8 @@ class RecordingDict(dict):
         value = RecordingDict(value) if isinstance(value, dict) else value
         super(RecordingDict, self).__setitem__(key, value)
         self.__nanodiff__['$set'][key] = value
+        if key in self.__nanodiff__['$unset']:
+            del self.__nanodiff__['$unset'][key]  # remove previous $unset if any
 
     def __delitem__(self, key):
         """Override `__delitem__ so we can track changes`"""

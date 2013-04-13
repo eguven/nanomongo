@@ -65,6 +65,8 @@ class RecordingDictTestCase(unittest.TestCase):
         self.assertEqual(42, d['foo'])
         del d['foo']
         self.assertEqual({'$set': {}, '$unset': {'foo': 1}, '$addToSet': {}}, d.__nanodiff__)
+        d['foo'] = "L33t"
+        self.assertEqual({'$set': {'foo': "L33t"}, '$unset': {}, '$addToSet': {}}, d.__nanodiff__)
 
     def test_sub_diff(self):
         """Test functionality of sub_diff for embedded documents"""
