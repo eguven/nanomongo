@@ -383,6 +383,8 @@ $addToSet: "%s"'''
                 raise UnsupportedOperation(err_str, field)
             # field name ok, ensure top level value is RecordingDict
             if not isinstance(self[top_key], RecordingDict):
-                err_str = '''Dotted key's target is not a dict: %s=%s'''
+                # what did you do, use dict.__setitem__ ? :)
+                err_str = '''Dotted key's target is not a RecordingDict: %s=%s \
+If you've just set it as a new dict; FYI: you can't $set and $addToSet together'''
                 raise ValidationError(err_str % (top_key, self[top_key]))
             top_level_add(self[top_key], deep_key, value)  # add & record

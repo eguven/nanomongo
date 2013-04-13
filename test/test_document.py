@@ -255,9 +255,16 @@ class MongoDocumentTestCase(unittest.TestCase):
             bar = Field(dict)
             moo = Field(str)
 
+        self.assertRaises(ValidationError, Doc().addToSet, *('$fail', 42))
+        self.assertRaises(ValidationError, Doc().addToSet, *('bar.$1', 42))
+        # use dict.__setitem__ to bypass RecordingDict cast at self.__setitem__
+        d = Doc()
+        dict.__setitem__(d, 'bar', {})
+        self.assertEqual(dict, type(d.bar))  # not RecordingDict
+        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
         d = Doc(foo=['foo_1', 'foo_2'], bar={'1': 'bar_1', '2': []}, moo='moo val')
         d.insert()
-        self.assertRaises(ValidationError, d.addToSet, *('moo', 1))
+        self.assertRaises(ValidationError, d.addToSet, *('moo', 42))
         self.assertRaises(UnsupportedOperation, d.addToSet, *('bar.a.b', 42))
         d.addToSet('foo', 'foo_1')
         d.moo = 'new moo'
@@ -279,6 +286,20 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.save()
         d_db = Doc.find_one()
         self.assertTrue(d_copy == d == d_db)
+        # check against field duplication at addToSet
+        d = Doc()
+        d.foo = [42]  # set -- top-level $addToSet will clash
+        self.assertEqual([42], d.__nanodiff__['$set']['foo'])
+        self.assertRaises(ValidationError, d.addToSet, *('foo', 42))
+        del d.foo  # unset -- top-level $addToSet will clash
+        self.assertRaises(ValidationError, d.addToSet, *('foo', 42))
+        d = Doc(bar={})
+        d.bar['1'] = [42]  # deep-level set -- dotted $addToSet will clash
+        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
+        d = Doc()
+        d.bar = {'1': [42]}  # dict set on top-level -- dotted $addToSet will clash
+        self.assertEqual({'bar': {'1': [42]}}, d.__nanodiff__['$set'])
+        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_sub_diff(self):

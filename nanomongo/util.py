@@ -60,15 +60,24 @@ class RecordingDict(dict):
         value = RecordingDict(value) if isinstance(value, dict) else value
         super(RecordingDict, self).__setitem__(key, value)
         self.__nanodiff__['$set'][key] = value
-        if key in self.__nanodiff__['$unset']:
-            del self.__nanodiff__['$unset'][key]  # remove previous $unset if any
+        self.clean_other_modifiers('$set', key)
 
     def __delitem__(self, key):
         """Override `__delitem__ so we can track changes`"""
         super(RecordingDict, self).__delitem__(key)
         self.__nanodiff__['$unset'][key] = 1
-        if key in self.__nanodiff__['$set']:
-            del self.__nanodiff__['$set'][key]  # remove previous $set if any
+        self.clean_other_modifiers('$unset', key)
+
+    def clean_other_modifiers(self, current_mod, field_name):
+        """Given `current_mod`, removes other `field_name` modifiers,
+        eg. when called with `$set`, removes `$unset` and `$addToSet`
+        etc. on `field_name`
+        """
+        for mod, updates in self.__nanodiff__.items():
+            if mod == current_mod:
+                continue
+            if field_name in updates:
+                del self.__nanodiff__[mod][field_name]
 
     def reset_diff(self):
         """reset `__nanodiff__` recursively; to be used after saving
