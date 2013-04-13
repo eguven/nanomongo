@@ -346,6 +346,7 @@ your document class with client, db, collection.''' % cls
             does not contain the value; create new list otherwise.
             raise `ValidationError` if non-list value initiated
             """
+            self.check_can_update('$addToSet', field)
             if field in self and isinstance(self[field], list):
                 if value not in self[field]:
                     self[field].append(value)
@@ -387,4 +388,6 @@ $addToSet: "%s"'''
                 err_str = '''Dotted key's target is not a RecordingDict: %s=%s \
 If you've just set it as a new dict; FYI: you can't $set and $addToSet together'''
                 raise ValidationError(err_str % (top_key, self[top_key]))
+            # make sure we have no $set or $unset on top_key
+            self.check_can_update('$addToSet', top_key)
             top_level_add(self[top_key], deep_key, value)  # add & record

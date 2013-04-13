@@ -111,6 +111,20 @@ class RecordingDict(dict):
                     diff['$addToSet'][dotkey] = v
         return diff
 
+    def check_can_update(self, modifier, field_name):
+        """Check if given `modifier` `field_name` combination can be
+        added. MongoDB does not allow field duplication with update
+        modifiers. This is to be used with methods `addToSet` ...
+        """
+        for mod, updates in self.__nanodiff__.items():
+            if mod == modifier:
+                continue
+            if field_name in updates:
+                err_str = 'Field name duplication not allowed with modifiers '
+                err_str += ('new: {%s} old: {%s: {%s: %s}}' %
+                            (modifier, mod, field_name, updates[field_name]))
+                raise ValidationError(err_str)
+
 
 class DotNotationMixin(object):
     """Mixin to make dot notation available on dictionaries"""
