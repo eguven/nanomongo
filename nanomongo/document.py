@@ -258,7 +258,7 @@ your document class with client, db, collection.''' % cls
 
     def __dir__(self):
         """Add defined Fields to dir"""
-        return sorted(super(BaseDocument, self).__dir__() + self.nanomongo.list_fields())
+        return sorted(dir(super(BaseDocument, self)) + self.nanomongo.list_fields())
 
     def validate(self):
         """Override to add extra validation"""
