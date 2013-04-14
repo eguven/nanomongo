@@ -7,6 +7,9 @@ If you like using ``pymongo`` native api but often find yourself subclassing
 field validations right? And index definitions, and ``pymongo.Collection``
 wrappers, and ... (you get the idea).
 
+.. image:: https://travis-ci.org/eguven/nanomongo.png
+        :target: https://travis-ci.org/eguven/nanomongo
+
 Features
 --------
 
