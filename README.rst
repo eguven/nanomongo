@@ -20,14 +20,16 @@ Features
 
 - optional ``dot_notation``
 
-- assignment and deletion tracking for ``'$set'`` and ``'$unset'`` and
-  atomic updates; you either insert or update
+- assignment and deletion (delta) tracking for ``'$set'`` and ``'$unset'``
+  and atomic updates; you either insert or update
 
-- *upcoming* ``'$addToSet'`` ``'$push'`` ``'$pull'`` funtionality on ``Document``
-  level
+- ``'$addToSet'`` on ``Document``
+
+- *upcoming* ``'$push'`` ``'$pull'`` funtionality
 
 
-**very** early stage and in development::
+**note**: nanomongo is in alpha stage and in development, documentation is
+in progress as well::
 
 
     # rough example
@@ -39,14 +41,21 @@ Features
     class MyDoc(BaseDocument, dot_notation=True, client=client, db='dbname'):
         foo = Field(str)
         bar = Field(int, required=False)
+
         __indexes__ = [
             Index('foo'),
             Index([('bar', 1), ('foo', -1)], unique=True),
         ]
 
+    doc = MyDoc(foo='L33t')
+    doc.bar = 42
+    doc.insert()
+
+    Doc.find_one({'foo': 'L33t'})
+
 
 nanomongo is written for Python3 and I intend to support both pymongo & motor
-under the hood.
+transparently under the hood.
 
 Contributions and insight are welcome!
 
