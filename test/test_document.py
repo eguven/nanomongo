@@ -422,3 +422,10 @@ class IndexTestCase(unittest.TestCase):
             ]
 
         self.assertEqual(3, len(Doc2.get_collection().index_information()))  # 2 + _id
+
+        class Doc3(BaseDocument):
+            foo = Field(str)
+            __indexes__ = [Index('foo')]
+
+        Doc3.register(client, db='nanotestdb')
+        self.assertEqual(2, len(Doc3.get_collection().index_information()))  # 1 + _id

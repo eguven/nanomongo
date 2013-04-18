@@ -4,7 +4,7 @@ import pymongo
 from bson.objectid import ObjectId
 
 from nanomongo.field import Field
-from nanomongo.document import BaseDocument
+from nanomongo.document import Index, BaseDocument
 
 try:
     import motor
@@ -68,4 +68,18 @@ class MotorDocumentTestCase(unittest.TestCase):
         del d['bar']
         yield motor.Op(d.save)
         yield AssertEqual(d, Doc.find_one, {'_id': d._id})
+        done()
+
+    @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @async_test_engine()
+    def test_index_motor(self, done):
+        """Motor: test index build using motor"""
+
+        class Doc(BaseDocument):
+            foo = Field(str)
+            __indexes__ = [Index('foo')]
+
+        Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
+        indexes = yield motor.Op(Doc.get_collection().index_information)
+        self.assertEqual(2, len(indexes))  # 1 + _id
         done()
