@@ -28,8 +28,8 @@ Features
 - *upcoming* ``'$push'`` ``'$pull'`` funtionality
 
 
-**note**: nanomongo is in alpha stage and in development, documentation is
-in progress as well::
+**note**: nanomongo is in alpha stage and in development, `documentation
+<https://nanomongo.readthedocs.org>`_ is in progress as well::
 
 
     # rough example
