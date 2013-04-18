@@ -1,4 +1,5 @@
 import unittest
+import time
 
 import pymongo
 from bson.objectid import ObjectId
@@ -80,6 +81,13 @@ class MotorDocumentTestCase(unittest.TestCase):
             __indexes__ = [Index('foo')]
 
         Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
+        # bit of a workaround, checking the current_op on the database because
+        # register runs ensure_index async and returns; we end up checking Index
+        # before it finishes building on slow systems (travis-ci holla!)
+        op = yield motor.Op(Doc.get_collection().database.current_op)
+        while op['inprog']:
+            time.sleep(0.1)
+            op = yield motor.Op(Doc.get_collection().database.current_op)
         indexes = yield motor.Op(Doc.get_collection().index_information)
         self.assertEqual(2, len(indexes))  # 1 + _id
         self.assertFalse(hasattr(Doc, '__indexes__'))
