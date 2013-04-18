@@ -8,13 +8,13 @@ from .util import check_keys
 
 class Field(object):
     """Instances of this class is used to define field types and automatically
-    create validators. Note that a Field definition has no value added.
+    create validators. Note that a Field definition has no value added::
 
         field_name = Field(str, default='cheeseburger')
+        foo = Field(datetime, auto_update=True)
+        bar = Field(list, required=False)
 
-    TODO: custom field validator
     """
-    # TODO: auto_now_add for datetime
     allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
     # kwarg_name : kwarg_input_validator dictionaries
     allowed_kwargs = {
@@ -26,13 +26,15 @@ class Field(object):
     }
 
     def __init__(self, *args, **kwargs):
-        """Field kwargs are checked for correctness and field validator is set
-        during __init__
+        """Field kwargs are checked for correctness and field validator is set,
+        along with other attributes such as ``required`` and ``auto_update``
 
         :Keyword Arguments:
-          - `default`: default field value, must pass type check
+          - `default`: default field value, must pass type check, can be a ``callable``
           - `required`: if ``True`` field must exist and not be ``None`` (default: ``True``)
-          - `auto_update`: valid for datetime fields (default: ``False``)
+          - `auto_update`: set value to ``datetime.utcnow()`` before inserts/saves;
+            only valid for datetime fields (default: ``False``)
+
         """
         if not args:
             raise TypeError('Field definition incorrect, please provide type')
@@ -62,8 +64,8 @@ class Field(object):
 
     @classmethod
     def check_kwargs(cls, kwargs, data_type):
-        """Check keyword arguments & their values given to `Field`
-        constructor such as: default, required ...
+        """Check keyword arguments & their values given to ``Field``
+        constructor such as ``default``, ``required`` ...
         """
         err_str = data_type.__name__ + ': %s argument not allowed or "%s" value invalid'
         for k, v in kwargs.items():
@@ -79,8 +81,8 @@ class Field(object):
                 raise TypeError(err_str % (k, v))
 
     def generate_validator(self, t, **kwargs):
-        """Generates and returns validator function (value_to_check, field_name='').
-        `field_name` kwarg is optional, used for better error reporting
+        """Generates and returns validator function ``(value_to_check, field_name='')``.
+        ``field_name`` kwarg is optional, used for better error reporting.
         """
         def validator(val, field_name=''):
             if val is None and 'required' in kwargs and not kwargs['required']:

@@ -41,8 +41,9 @@ def check_keys(dct):
 
 
 class RecordingDict(dict):
-    """A dictionary subclass modifying `__setitem__` and `__delitem__`
-    methods to record changes in its `__nanodiff__` attribute"""
+    """A dictionary subclass modifying :meth:`~__setitem__()` and
+    :meth:`~__delitem__()` methods to record changes in its
+    :attr:`~__nanodiff__` attribute"""
     def __init__(self, *args, **kwargs):
         super(RecordingDict, self).__init__(*args, **kwargs)
         self.__nanodiff__ = {
@@ -50,7 +51,7 @@ class RecordingDict(dict):
         }
 
     def __setitem__(self, key, value):
-        """Override `__setitem__ so we can track changes`"""
+        """Override :meth:`~dict.__setitem__` so we can track changes"""
         try:
             skip = self[key] == value
         except KeyError:
@@ -63,7 +64,7 @@ class RecordingDict(dict):
         self.clean_other_modifiers('$set', key)
 
     def __delitem__(self, key):
-        """Override `__delitem__ so we can track changes`"""
+        """Override :meth:`~dict.__delitem__` so we can track changes"""
         super(RecordingDict, self).__delitem__(key)
         self.__nanodiff__['$unset'][key] = 1
         self.clean_other_modifiers('$unset', key)
@@ -91,7 +92,7 @@ class RecordingDict(dict):
 
     def get_sub_diff(self):
         """get `__nanodiff__` from embedded documents. Find fields of
-        `RecordingDict` type, iterate over their diff and build dotted
+        :class:`~RecordingDict` type, iterate over their diff and build dotted
         keys for top level diff
         """
         diff = {'$set': {}, '$unset': {}, '$addToSet': {}}

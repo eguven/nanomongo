@@ -16,7 +16,9 @@ class BasesTuple(tuple):
 
 
 class Index(object):
-    """A container for clean index definition, passed to create_index as it is"""
+    """A container for clean index definition, it's ``args`` and
+    ``kwargs`` are passed to ``pymongo.Collection.create_index``
+    """
     def __init__(self, *args, **kwargs):
         if not args:
             raise TypeError('Index: key or list of key-direction tuples expected')
@@ -25,6 +27,10 @@ class Index(object):
 
 
 class Nanomongo(object):
+    """Contains information about the Document it's attached to like
+    its fields (which contain validators), db and collection etc and
+    provides methods to ease checks
+    """
     def __init__(self, fields=None):
         super(Nanomongo, self).__init__()
         if not isinstance(fields, dict):
@@ -95,14 +101,15 @@ class Nanomongo(object):
 
     def add_son_manipulator(self):
         """add our son manipulator to transform documents coming from mongodb
-        to the class we defined, see .util.NanomongoSONManipulator
+        to the class we defined, see
+        :class:`~nanomongo.util.NanomongoSONManipulator`
         """
         manipulator = NanomongoSONManipulator(self.classref())
         self.database.add_son_manipulator(manipulator)
 
     def register(self, client=None, db_string=None, collection=None):
         """register the class. this is called from defined documents'
-        `register` method
+        ``register`` method
         """
         self.set_client(client) if client else None
         self.set_db(db_string) if db_string else None
@@ -122,6 +129,9 @@ class DocumentMeta(type):
     """
 
     def __new__(cls, name, bases, dct, **kwargs):
+        """Check against illegal attributes (eg. ``nanomongo``); get bases
+        so we can get their :class:`~nanomongo.field.Field` definitions
+        """
         if 'nanomongo' in dct:
             raise TypeError('field name "nanomongo" is not allowed')
         if '__indexes__' in dct and not isinstance(dct['__indexes__'], list):
@@ -133,6 +143,9 @@ class DocumentMeta(type):
         return super(DocumentMeta, cls).__new__(cls, name, new_bases, dct)
 
     def __init__(cls, name, bases, dct, **kwargs):
+        """Create the `~nanomongo.document.Nanomongo` for this class and delete
+        :class:`~nanomongo.field.Field` attributes. Also sets client, db, collection
+        info if provided and runs indexes"""
         super(DocumentMeta, cls).__init__(name, bases, dct)
         if hasattr(cls, 'nanomongo'):
             cls.nanomongo = Nanomongo.from_dicts(cls.nanomongo.fields, dct)
@@ -170,6 +183,7 @@ class DocumentMeta(type):
             delattr(cls, '__indexes__')
 
     def ensure_index(cls, index):
+        """``Collection.ensure_index`` wrapper"""
         i = index.args[0]  # key or list
         if not isinstance(i, (str, list)):
             raise TypeError('Index: str or list of key-value tuples expected')
@@ -205,9 +219,25 @@ class DocumentMeta(type):
 
 
 class BaseDocument(RecordingDict, metaclass=DocumentMeta):
-    """BaseDocument class. Subclasses to be used."""
+    """BaseDocument class. Subclasses should be used. See
+    :meth:`~BaseDocument.__init__()`
+    """
 
     def __init__(self, *args, **kwargs):
+        """Inits the document with given data and validates the fields
+        (field validation bad idea during init?). If you define
+        ``__init__`` method for your document class, make sure to call
+        this
+        ::
+
+            class MyDoc(BaseDocument, dot_notation=True):
+                foo = Field(str)
+                bar = Field(int, required=False)
+
+                def __init__(self, *args, **kwargs):
+                    super(MyDoc, self).__init__(*args, **kwargs)
+                    # do other stuff
+        """
         # if input dict, merge (not updating) into kwargs
         if args and not isinstance(args[0], dict):
             raise TypeError('dict or dict subclass argument expected')
@@ -243,17 +273,17 @@ your document class with client, db, collection.''' % cls
 
     @classmethod
     def get_collection(cls):
-        """Returns collection as set in `cls.nanomongo`"""
+        """Returns collection as set in :attr:`~cls.nanomongo`"""
         return cls.nanomongo.get_collection()
 
     @classmethod
     def find(cls, *args, **kwargs):
-        """collection.find"""
+        """``pymongo.Collection().find`` wrapper for this document"""
         return cls.get_collection().find(*args, **kwargs)
 
     @classmethod
     def find_one(cls, *args, **kwargs):
-        """collection.find_one"""
+        """``pymongo.Collection().find_one`` wrapper for this document"""
         return cls.get_collection().find_one(*args, **kwargs)
 
     def __dir__(self):
@@ -261,11 +291,13 @@ your document class with client, db, collection.''' % cls
         return sorted(dir(super(BaseDocument, self)) + self.nanomongo.list_fields())
 
     def validate(self):
-        """Override to add extra validation"""
+        """Override this to add extra document validation, will be
+        called at the end of :meth:`~validate_all()` """
         pass
 
     def validate_all(self):
-        """Check against extra fields, run field validators and user-defined validate"""
+        """Check against extra fields, run field validators and
+        user-defined :meth:`~validate()` """
         for field, value in self.items():
             if not self.nanomongo.has_field(field):
                 raise ValidationError('extra field "%s" with value "%s"' % (field, value))
@@ -277,7 +309,8 @@ your document class with client, db, collection.''' % cls
         return self.validate()
 
     def validate_diff(self):
-        """Check correctness of diffs before partial update"""
+        """Check correctness of diffs before partial update, also run
+        user-defined :meth:`~validate()` """
         sets = self.__nanodiff__['$set']
         unsets = self.__nanodiff__['$unset']
         for field_name, field_value in unsets.items():
@@ -290,16 +323,18 @@ your document class with client, db, collection.''' % cls
                 raise ValidationError(err_str % (field_name, field_value))
             field = self.nanomongo.fields[field_name]
             field.validator(field_value, field_name=field_name)
+        return self.validate()
 
     def run_auto_updates(self):
-        """Runs functions in `self.nanomongo.transforms` like
-        auto_update stuff before `save`
+        """Runs functions in :attr:`nanomongo.transforms` like
+        auto_update stuff before :meth:`~insert()` :meth:`~save()`
         """
         for field_name, updater in self.nanomongo.transforms.items():
             self[field_name] = updater()
 
     def insert(self, **kwargs):
-        """Insert document into database (or full save), return _id"""
+        """Insert document into database, return _id. Runs
+        :meth:`~run_auto_updates()` and :meth:`~validate_all()` """
         self.run_auto_updates()
         self.validate_all()
         id_or_ids = self.get_collection().insert(self, **kwargs)
@@ -310,7 +345,10 @@ your document class with client, db, collection.''' % cls
         return id_or_ids
 
     def save(self, **kwargs):
-        """Saves document, returning its `_id`"""
+        """Saves document. This method only does partial updates and no
+        inserts. Runs :meth:`~run_auto_updates()` and :meth:`~validate_all()`
+        prior to save. Returns ``Collection.update()`` response
+        """
         if '_id' not in self:
             raise ValidationError('insert first; save does partial updates')
         if '_id' in self.__nanodiff__['$set']:
@@ -332,19 +370,27 @@ your document class with client, db, collection.''' % cls
         return response
 
     def addToSet(self, field, value):
-        """MongoDB `collection.update` with $addToSet. This sets the
-        value accordingly and records the change in `__nanodiff__` to
-        be saved with `BaseDocument.save`.
+        """MongoDB ``Collection.update()`` $addToSet functionality.
+        This sets the value accordingly and records the change in
+        :attr:`~__nanodiff__` to be saved with :meth:`~save()`.
+        ::
 
-        Contrary to how $set fails silently under __setitem__ when the
+            # MongoDB style dot notation can be used to add to lists
+            # in embedded documents
+            doc = Doc(foo=[], bar={})
+            doc.addToSet('foo', new_value)
+            doc.addToSet('bar.sub_field', new_value)
+
+        Contrary to how $set has no effect under __setitem__ (see 
+        :class:`~.util.RecordingDict`.__setitem__) when the
         new value is equal to the current; $addToSet explicitly adds
-        the call to `__nanodiff__` so it will be sent to DB when `save`
-        is called.
+        the call to :attr:`~__nanodiff__` so it will be sent to the
+        database when :meth:`save()` is called.
         """
         def top_level_add(self, field, value):
             """add the value to field. appending if the list exists and
             does not contain the value; create new list otherwise.
-            raise `ValidationError` if non-list value initiated
+            raise :class:`.errors.ValidationError` if non-list value initiated
             """
             self.check_can_update('$addToSet', field)
             if field in self and isinstance(self[field], list):
@@ -353,11 +399,8 @@ your document class with client, db, collection.''' % cls
             elif field not in self or self[field] is None:
                 dict.__setitem__(self, field, [value])  # to avoid $set record
             else:
-                err_str = 'Could not $addToSet on valid field, bad init? : "%s"'
-                raise ValidationError(err_str % self[field])
-            # record in __nanodiff__
-            # if '$addToSet' not in self.__nanodiff__:
-            #     self.__nanodiff__['$addToSet'] = {}
+                err_str = 'Could not $addToSet on valid field, bad init? %s: %s'
+                raise ValidationError(err_str % (field, self[field]))
             if field not in self.__nanodiff__['$addToSet']:
                 self.__nanodiff__['$addToSet'][field] = {'$each': [value]}
             elif value not in self.__nanodiff__['$addToSet'][field]['$each']:
@@ -373,7 +416,8 @@ your document class with client, db, collection.''' % cls
                 top_level_add(self, field, value)  # add & record
             else:
                 err_str = 'Cannot apply $addToSet modifier to non-array: %s=%s'
-                raise ValidationError(err_str % (field, self[field]))
+                err_str = err_str % (field, self.nanomongo.fields[field].data_type)
+                raise ValidationError(err_str)
         # if deep-level
         else:
             try:
@@ -382,8 +426,14 @@ your document class with client, db, collection.''' % cls
                 err_str = '''Only top level and one level deep keus supported for \
 $addToSet: "%s"'''
                 raise UnsupportedOperation(err_str, field)
-            # field name ok, ensure top level value is RecordingDict
-            if not isinstance(self[top_key], RecordingDict):
+            if not self.nanomongo.has_field(top_key):
+                raise ValidationError('Undefined field: "%s"' % top_key)
+            elif dict != self.nanomongo.fields[top_key].data_type:
+                raise ValidationError('"%s" is not a dict' % top_key)
+            # field name ok, ensure top level value is RecordingDict type
+            if top_key not in self:  # not set yet, do it
+                dict.__setitem__(self, top_key, RecordingDict())
+            elif not isinstance(self[top_key], RecordingDict):
                 # what did you do, use dict.__setitem__ ? :)
                 err_str = '''Dotted key's target is not a RecordingDict: %s=%s \
 If you've just set it as a new dict; FYI: you can't $set and $addToSet together'''
