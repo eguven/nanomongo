@@ -427,5 +427,7 @@ class IndexTestCase(unittest.TestCase):
             foo = Field(str)
             __indexes__ = [Index('foo')]
 
+        self.assertTrue(hasattr(Doc3, '__indexes__'))
         Doc3.register(client, db='nanotestdb')
         self.assertEqual(2, len(Doc3.get_collection().index_information()))  # 1 + _id
+        self.assertFalse(hasattr(Doc3, '__indexes__'))

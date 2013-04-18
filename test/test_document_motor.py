@@ -82,4 +82,5 @@ class MotorDocumentTestCase(unittest.TestCase):
         Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
         indexes = yield motor.Op(Doc.get_collection().index_information)
         self.assertEqual(2, len(indexes))  # 1 + _id
+        self.assertFalse(hasattr(Doc, '__indexes__'))
         done()

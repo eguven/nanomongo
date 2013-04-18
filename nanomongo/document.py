@@ -109,19 +109,31 @@ class Nanomongo(object):
 
     def register(self, client=None, db_string=None, collection=None):
         """register the class. this is called from defined documents'
-        ``register`` method
+        :meth:`~BaseDocument.register()` method
         """
         self.set_client(client) if client else None
         self.set_db(db_string) if db_string else None
         self.set_collection() if collection else None
         self.check_config()
         self.add_son_manipulator()
+        # indexes
+        doc_class = self.classref()
+        indexes = doc_class.__indexes__ if hasattr(doc_class, '__indexes__') else []
+        for index in indexes:
+            self.ensure_index(index)
+        if hasattr(doc_class, '__indexes__'):
+            delattr(doc_class, '__indexes__')
+        # mark as registered
         self.registered = True
 
     def get_collection(self):
         """Returns collection"""
         self.check_config()
         return self.database[self.collection]
+
+    def ensure_index(self, index):
+        """``Collection.ensure_index`` wrapper"""
+        return self.get_collection().ensure_index(*index.args, **index.kwargs)
 
 
 class DocumentMeta(type):
@@ -178,12 +190,10 @@ class DocumentMeta(type):
         for index in indexes:
             if not isinstance(index, Index):
                 raise TypeError('__indexes__: list of Index instances expected')
-            cls.ensure_index(index)
-        if hasattr(cls, '__indexes__'):
-            delattr(cls, '__indexes__')
+            cls.check_index(index)
 
-    def ensure_index(cls, index):
-        """``Collection.ensure_index`` wrapper"""
+    def check_index(cls, index):
+        """check correctness of :class:`~Index` definitions"""
         i = index.args[0]  # key or list
         if not isinstance(i, (str, list)):
             raise TypeError('Index: str or list of key-value tuples expected')
@@ -192,11 +202,10 @@ class DocumentMeta(type):
         elif isinstance(i, list):
             for tup in i:
                 if not isinstance(tup, tuple) or 2 != len(tup):
-                    raise TypeError('Index: str or list of key-value tuples expected')
+                    raise TypeError('Index: list of key-value tuples expected')
                 if not cls.nanomongo.has_field(tup[0]):
                     err_str = 'field for index "%s" does not exist' % tup[0]
                     raise IndexMismatchError(err_str)
-        return cls.nanomongo.get_collection().ensure_index(*index.args, **index.kwargs)
 
     @classmethod
     def _get_bases(cls, bases):
@@ -264,7 +273,9 @@ class BaseDocument(RecordingDict, metaclass=DocumentMeta):
 
     @classmethod
     def register(cls, client=None, db=None, collection=None):
-        """Register this document. Currently sets SON manipulator"""
+        """Register this document. Sets client, database, collection
+        information, builds (ensure) indexes and sets SON manipulator
+        """
         if cls.nanomongo.registered:
             err_str = '''%s is already registered. This is automatic if you have defined
 your document class with client, db, collection.''' % cls
@@ -381,7 +392,7 @@ your document class with client, db, collection.''' % cls
             doc.addToSet('foo', new_value)
             doc.addToSet('bar.sub_field', new_value)
 
-        Contrary to how $set has no effect under __setitem__ (see 
+        Contrary to how $set has no effect under __setitem__ (see
         :class:`~.util.RecordingDict`.__setitem__) when the
         new value is equal to the current; $addToSet explicitly adds
         the call to :attr:`~__nanodiff__` so it will be sent to the
