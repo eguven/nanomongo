@@ -234,7 +234,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'nanomongo', 'nanomongo Documentation',
-   'Eren Güven', 'nanomongo', 'One line description of project.',
+   'Eren Güven', 'nanomongo', 'minmal MongoDB ODM for Python',
    'Miscellaneous'),
 ]
 
