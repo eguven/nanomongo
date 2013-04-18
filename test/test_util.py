@@ -41,6 +41,7 @@ class HelperFuncionsTestCase(unittest.TestCase):
             {'foo': {'$bar': 42}},
         ]
         [self.assertRaises(ValidationError, check_keys, *(dct,)) for dct in bad_dicts]
+        self.assertRaises(TypeError, check_keys, *([],))
 
 
 class RecordingDictTestCase(unittest.TestCase):

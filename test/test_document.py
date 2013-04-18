@@ -48,6 +48,30 @@ class DocumentTestCase(unittest.TestCase):
         self.assertRaises(ValidationError, NewDoc, *({'foo': {'$bar': 42}},))
         self.assertRaises(ValidationError, NewDoc, **{'foo': {'bar.foo': 42}})
 
+    def test_dot_notation_no_conflict(self):
+        """Test that :class:`~nanomongo.util.DotNotationMixin` does not
+        interfere when attribute access on a non-field name is UnsupportedOperation
+        """
+        class Doc(BaseDocument, dot_notation=True):
+            foo = Field(str)
+
+        d = Doc()
+        self.assertRaises(AttributeError, lambda: d.foo)
+        d.foo = 42
+        self.assertTrue('foo' in d)
+        # attribute set/get works as usual for names that are not fields
+        self.assertRaises(AttributeError, lambda: d.bar)
+        d.bar = 'bar value'
+        self.assertTrue('bar' not in d)  # not in the data that we'll save
+        self.assertEqual('bar value', d.bar)
+        del d.bar
+        self.assertRaises(AttributeError, lambda: d.bar)
+        del d['foo']
+
+        def f():
+            del d.foo
+        self.assertRaises(AttributeError, f)
+
     def test_document(self):
         """Test document definition, initialization, setting and getting
         attributes, validation
@@ -244,6 +268,10 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.bar = 'wrong type'
         self.assertRaises(ValidationError, d.save)
         self.assertRaises(ValidationError, d.insert)
+        del d.bar
+        d.save()
+        del d.foo
+        self.assertRaises(ValidationError, d.save)
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_partial_update_addToSet(self):
@@ -265,6 +293,8 @@ class MongoDocumentTestCase(unittest.TestCase):
         d = Doc(foo=['foo_1', 'foo_2'], bar={'1': 'bar_1', '2': []}, moo='moo val')
         d.insert()
         self.assertRaises(ValidationError, d.addToSet, *('moo', 42))
+        self.assertRaises(ValidationError, d.addToSet, *('moo.not_dict', 42))
+        self.assertRaises(ValidationError, d.addToSet, *('undefined.field', 42))
         self.assertRaises(UnsupportedOperation, d.addToSet, *('bar.a.b', 42))
         d.addToSet('foo', 'foo_1')
         d.moo = 'new moo'
@@ -300,6 +330,19 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.bar = {'1': [42]}  # dict set on top-level -- dotted $addToSet will clash
         self.assertEqual({'bar': {'1': [42]}}, d.__nanodiff__['$set'])
         self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
+
+        class Doc2(BaseDocument, dot_notation=True):
+            optional = Field(dict, required=False)
+
+        Doc2.register(client=client, db='nanotestdb')
+        dd = Doc2()
+        dd.insert()
+        # addToSet on unset field
+        dd.addToSet('optional.sub', 42)
+        self.assertEqual([42], dd.optional['sub'])
+        self.assertEqual({'sub': {'$each': [42]}}, dd.optional.__nanodiff__['$addToSet'])
+        dd.save()
+        self.assertEqual(1, Doc2.find({'optional.sub': 42}).count())
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_sub_diff(self):
