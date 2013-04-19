@@ -75,7 +75,7 @@ unless you explicitly set ``w=0`` ::
 :meth:`~.document.BaseDocument.save()` uses ``pymongo.Collection().update()``
 with the changed data. The above will run ::
 
-    update({'_id': doc['_id'], {'$set': {'foo': 'new foo'}, '$unset': {'bar': 1}}})
+    update({'_id': doc['_id']}, {'$set': {'foo': 'new foo'}, '$unset': {'bar': 1}})
 
 Querying
 ^^^^^^^^
@@ -90,8 +90,7 @@ Advanced Features
 $addToSet
 ^^^^^^^^^
 
-I use MongoDB ``$addToSet`` update modifier a lot and managing normal saves and
-extra written updates separately was **meh** (technical term).
+MongoDB ``$addToSet`` update modifier is very useful. nanomongo implements it.
 
 :meth:`~.document.BaseDocument.addToSet()` will do the `add-to-field-if-doesnt-exist`
 on your document instance and record the change to be applied later when
@@ -112,7 +111,7 @@ on your document instance and record the change to be applied later when
     doc.addToSet('dict_field.foo', 'like a boss')
     doc.save()
 
-Both of the above ``addToSet`` are applied to the instance like MongoDB does it eg.
+Both of the above ``addToSet`` are applied to the ``NewDoc`` instance like MongoDB does it eg.
 
   - create list field with new value if it doesn't exist
   - add new value to list field if it's missing (append)
