@@ -62,3 +62,10 @@ class HelperFuncionsTestCase(unittest.TestCase):
         self.assertEqual(2, len([c for c in batman.get_comments()]))
         self.assertEqual(2, len([c for c in selina.get_comments()]))
         self.assertEqual(0, len([c for c in news.get_comments()]))
+        for entry in batman.get_comments(with_entries=True, sort=[('_id', pymongo.DESCENDING)]):
+            if entry.title.startswith('Arkham'):
+                self.assertEqual(1, len(entry.comments))
+            elif entry.title.startswith('Jetpack'):
+                self.assertEqual(2, len(entry.comments))
+            else:
+                raise AssertionError('Extra entry received')

@@ -57,11 +57,12 @@ class User(BaseDocument, dot_notation=True):
         """Get comments of this User, extra kwargs
         (such as limit) are passed to :class:`~pymongo.Collection().find()`
         of :class:`Entry`. Default gets just the comments, ``with_entries=True``
-        to get entries as well. Returns generator/cursor
+        to get entries as well. Returns generator
         """
         cursor = Entry.find({'comments.author': self.name}, **kwargs)
         if with_entries:
-            return cursor
+            for entry in cursor:
+                yield entry
         for entry in cursor:
             for comment in entry.comments:
                 if self.name == comment['author']:
