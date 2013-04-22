@@ -433,14 +433,24 @@ class IndexTestCase(unittest.TestCase):
                     Index([('foo', pymongo.ASCENDING), ('bar', pymongo.DESCENDING)]),
                 ]
 
-        count = 0
+        def def_mismatch_4():
+            class Doc(BaseDocument):
+                foo = Field(str)
+                bar = Field(int)
+                __indexes__ = [
+                    Index('foo.fail'),
+                    Index([('foo.fail', pymongo.ASCENDING), ('bar.fail', pymongo.ASCENDING)]),
+                ]
+
+        counts = {'type': 0, 'mismatch': 0}
         for fname, func in locals().items():  # run the above defined functions
-            count += 1
             if 'type' in fname:
+                counts['type'] += 1
                 self.assertRaises(TypeError, func)
             elif 'mismatch' in fname:
+                counts['mismatch'] += 1
                 self.assertRaises(IndexMismatchError, func)
-        self.assertTrue(7 <= count)
+        self.assertTrue(4 == counts['type'] == counts['mismatch'])
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_index_definitions(self):

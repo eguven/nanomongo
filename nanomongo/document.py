@@ -194,16 +194,22 @@ class DocumentMeta(type):
 
     def check_index(cls, index):
         """check correctness of :class:`~Index` definitions"""
+        def valid_index_key(ikey):
+            if '.' not in ikey:
+                return cls.nanomongo.has_field(ikey)
+            field = ikey.split('.')[0]
+            return (cls.nanomongo.has_field(field) and
+                    cls.nanomongo.fields[field].data_type in [dict, list])
         i = index.args[0]  # key or list
         if not isinstance(i, (str, list)):
             raise TypeError('Index: str or list of key-value tuples expected')
-        if isinstance(i, str) and not cls.nanomongo.has_field(i):
+        if isinstance(i, str) and not valid_index_key(i):
             raise IndexMismatchError('field for index "%s" does not exist' % i)
         elif isinstance(i, list):
             for tup in i:
                 if not isinstance(tup, tuple) or 2 != len(tup):
                     raise TypeError('Index: list of key-value tuples expected')
-                if not cls.nanomongo.has_field(tup[0]):
+                if not valid_index_key(tup[0]):
                     err_str = 'field for index "%s" does not exist' % tup[0]
                     raise IndexMismatchError(err_str)
 
