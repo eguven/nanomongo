@@ -471,6 +471,21 @@ class IndexTestCase(unittest.TestCase):
             __indexes__ = [Index('foo')]
 
         self.assertTrue(hasattr(Doc3, '__indexes__'))
-        Doc3.register(client, db='nanotestdb')
+        Doc3.register(client=client, db='nanotestdb')
         self.assertEqual(2, len(Doc3.get_collection().index_information()))  # 1 + _id
         self.assertFalse(hasattr(Doc3, '__indexes__'))
+
+        class Doc4(BaseDocument):
+            # test indexes on dotted keys
+            foo = Field(list)
+            bar = Field(dict)
+            __indexes__ = [
+                Index('bar.moo'),
+                # compund on two embedded document fields
+                Index([('bar.moo', pymongo.ASCENDING), ('bar.zoo', pymongo.ASCENDING)]),
+                # compound on embedded document field + list element document field
+                Index([('bar.moo', pymongo.ASCENDING), ('foo.whatever', pymongo.ASCENDING)]),
+            ]
+
+        Doc4.register(client=client, db='nanotestdb')
+        self.assertEqual(4, len(Doc4.get_collection().index_information()))  # 4 + _id
