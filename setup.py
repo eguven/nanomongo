@@ -2,11 +2,10 @@
 import multiprocessing  # http://bugs.python.org/issue15881#msg170215
 
 from setuptools import setup
-import nanomongo
 
 setup(
     name='nanomongo',
-    version=nanomongo.__version__,
+    version='0.1',
     description='Minimal Python ODM for MongoDB',
     long_description=open('README.rst').read(),
     author='Eren Güven',
