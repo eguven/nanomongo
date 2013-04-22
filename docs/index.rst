@@ -6,8 +6,6 @@
 Welcome to nanomongo's documentation!
 =====================================
 
-*this documentation is incomplete and the project is in alpha stage*
-
 **nanomongo** is a minimal MongoDB Object-Document Mapper for Python.
 It does not attempt to be a feature-complete ODM but if you like
 using ``pymongo`` api with python ``dict`` and often find yourself
@@ -21,6 +19,11 @@ Installation
 
     $ pip install nanomongo
 
+**Note**: I recommend installing from GIT repository as long as version is ``0.1``.
+
+.. code-block:: console
+
+    $ pip install git+https://github.com/eguven/nanomongo
 
 Quick Tutorial
 --------------
@@ -83,6 +86,11 @@ Querying
 
     Doc.find({'bar': 42})
     Doc.find_one({'foo': 'new foo'})
+
+Extensive Example
+-----------------
+
+See :doc:`example`
 
 Advanced Features
 -----------------
