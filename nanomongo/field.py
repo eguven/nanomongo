@@ -1,3 +1,4 @@
+import copy
 import datetime
 
 from bson import DBRef, ObjectId
@@ -61,6 +62,11 @@ class Field(object):
                     validation_failed = True
                 if validation_failed:
                     raise TypeError(new_err)
+                # check if dict/list type and wrap copy in callable
+                if isinstance(self.default_value, (dict, list)):
+                    def default_value_wrapper():
+                        return copy.deepcopy(kwargs['default'])
+                    self.default_value = default_value_wrapper
 
     @classmethod
     def check_kwargs(cls, kwargs, data_type):

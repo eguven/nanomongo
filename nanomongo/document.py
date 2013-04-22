@@ -431,10 +431,12 @@ your document class with client, db, collection.''' % cls
             if ((self.nanomongo.has_field(field) and
                  list == self.nanomongo.fields[field].data_type)):
                 top_level_add(self, field, value)  # add & record
-            else:
+            elif self.nanomongo.has_field(field):
                 err_str = 'Cannot apply $addToSet modifier to non-array: %s=%s'
                 err_str = err_str % (field, self.nanomongo.fields[field].data_type)
                 raise ValidationError(err_str)
+            else:
+                raise ValidationError('Undefined field: "%s"' % top_key)
         # if deep-level
         else:
             try:
