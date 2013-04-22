@@ -12,6 +12,7 @@ setup(
     author='Eren Güven',
     author_email='erenguven0@gmail.com',
     url='https://github.com/eguven/nanomongo',
+    install_requires=['pymongo >= 2.5'],
     packages=['nanomongo'],
     setup_requires=['nose'],
     test_suite='nose.main',
