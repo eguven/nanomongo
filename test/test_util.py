@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
@@ -42,6 +43,21 @@ class HelperFuncionsTestCase(unittest.TestCase):
         ]
         [self.assertRaises(ValidationError, check_keys, *(dct,)) for dct in bad_dicts]
         self.assertRaises(TypeError, check_keys, *([],))
+
+    @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
+    def test_check_spec(self):
+        """Test check spec and warning messages"""
+        class Doc(BaseDocument, client=PYMONGO_CLIENT, db='nanotestdb'):
+            foo = Field(str)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter('always')
+            Doc.find({'bar': 42})
+            self.assertTrue(1 == len(w) and 'has no field' in str(w[-1].message))
+            Doc.find({'foo.bar': 42})
+            self.assertTrue(2 == len(w) and 'is not of type' in str(w[-1].message))
+            Doc.find_one({'bar.moo': 42})
+            self.assertTrue(3 == len(w) and 'has no field' in str(w[-1].message))
 
 
 class RecordingDictTestCase(unittest.TestCase):

@@ -8,6 +8,7 @@ from .errors import *
 from .field import Field
 from .util import (
     RecordingDict, DotNotationMixin, valid_client, NanomongoSONManipulator,
+    check_spec,
 )
 
 
@@ -296,11 +297,15 @@ your document class with client, db, collection.''' % cls
     @classmethod
     def find(cls, *args, **kwargs):
         """``pymongo.Collection().find`` wrapper for this document"""
+        if args:
+            check_spec(cls, args[0])
         return cls.get_collection().find(*args, **kwargs)
 
     @classmethod
     def find_one(cls, *args, **kwargs):
         """``pymongo.Collection().find_one`` wrapper for this document"""
+        if args:
+            check_spec(cls, args[0])
         return cls.get_collection().find_one(*args, **kwargs)
 
     def __dir__(self):

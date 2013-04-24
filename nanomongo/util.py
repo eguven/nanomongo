@@ -1,4 +1,5 @@
 import __main__
+import warnings
 
 import pymongo
 
@@ -38,6 +39,24 @@ def check_keys(dct):
             raise ValidationError(dollar_err_str % k)
         elif isinstance(v, dict):
             check_keys(v)
+
+
+def check_spec(cls, spec):
+    """Check the query spec for given class & display warnings.
+    Dotted keys are checked for top-level field existence and its type
+    being dict/list. Normal keys are checked for field existence only.
+    """
+    w_field = '{0} has no field "{1}", can not match'
+    w_field_type = '{0} field "{1}" is not of type {2}, can not match'
+    for field in spec.keys():
+        f = field.split('.')[0]
+        if not cls.nanomongo.has_field(f):
+            warnings.warn(w_field.format(cls, f), RuntimeWarning)
+        elif '.' in field:
+            dtype = cls.nanomongo.fields[f].data_type
+            if dtype not in (dict, list):
+                warnings.warn(w_field_type.format(cls, f, (dict, list)),
+                              RuntimeWarning)
 
 
 class RecordingDict(dict):

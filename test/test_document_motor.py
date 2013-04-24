@@ -34,7 +34,7 @@ class MotorDocumentTestCase(unittest.TestCase):
 
         col = Doc.get_collection()
         self.assertTrue(isinstance(col, motor.MotorCollection))
-        yield AssertEqual(None, Doc.find_one, None)
+        yield AssertEqual(None, Doc.find_one)
         d = Doc(foo='foo value', bar=42)
         _id = yield motor.Op(d.insert)
         self.assertTrue(isinstance(_id, ObjectId))
