@@ -132,6 +132,22 @@ When save is called, query becomes: ::
 
 Undefined fields or field type mismatch raises :class:`~.errors.ValidationError`.
 
+QuerySpec check
+^^^^^^^^^^^^^^^
+
+:meth:`~.document.BaseDocument.find()` and :meth:`~.document.BaseDocument.find_one()`
+has a simple check against queries that can not match, displaying warnings. This is
+an experimental feature and at the moment and only does type checks as such:
+
+``{'foo': 1}`` will display warnings if
+
+- Document has no field named ``foo`` (field existence)
+- ``foo`` field is not of type ``int`` (field data type)
+
+or ``{'foo.bar': 1}`` will display warnings if
+
+- ``foo`` field is not of type ``dict`` (dotted field type)
+
 pymongo & motor
 ---------------
 
