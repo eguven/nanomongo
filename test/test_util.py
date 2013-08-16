@@ -5,6 +5,7 @@ from nanomongo.field import Field
 from nanomongo.document import BaseDocument
 from nanomongo.util import (
     DotNotationMixin, valid_field, valid_client, RecordingDict, check_keys,
+    allow_client,
 )
 from nanomongo.errors import ValidationError
 
@@ -59,6 +60,14 @@ class HelperFuncionsTestCase(unittest.TestCase):
             Doc.find_one({'bar.moo': 42})
             self.assertTrue(3 == len(w) and 'has no field' in str(w[-1].message))
 
+    def test_allow_mock(self):
+        class MockClient():
+            pass
+
+        client = MockClient()
+        self.assertFalse(valid_client(client))
+        allow_client(MockClient)
+        self.assertTrue(valid_client(client))
 
 class RecordingDictTestCase(unittest.TestCase):
     def test_recording_dict(self):
