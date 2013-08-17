@@ -114,7 +114,7 @@ class Nanomongo(object):
         """
         self.set_client(client) if client else None
         self.set_db(db_string) if db_string else None
-        self.set_collection() if collection else None
+        self.set_collection(collection) if collection else None
         self.check_config()
         self.add_son_manipulator()
         # indexes

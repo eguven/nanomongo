@@ -208,6 +208,7 @@ class ClientTestCase(unittest.TestCase):
         m_count = len(Doc.get_collection().database.outgoing_copying_manipulators)
         self.assertEqual(1, m_count)
 
+        Doc2.register(client=client, db='nanotestdb', collection='doc2_collection')
 
 class MongoDocumentTestCase(unittest.TestCase):
     def setUp(self):
