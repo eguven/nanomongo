@@ -5,19 +5,28 @@ import pymongo
 
 from .errors import ExtraFieldError, ValidationError
 
+ok_types = ()
+
+try:
+    import pymongo
+    ok_types += (pymongo.MongoClient, pymongo.MongoReplicaSetClient)
+    import motor
+    ok_types += (motor.MotorClient, motor.MotorReplicaSetClient)
+except ImportError as e:
+    if not ok_types:
+        raise e
 
 def valid_client(client):
-    """returns ``True`` if input is pymongo or motor client"""
-    ok_types = ()
-    try:
-        import pymongo
-        ok_types += (pymongo.MongoClient, pymongo.MongoReplicaSetClient)
-        import motor
-        ok_types += (motor.MotorClient, motor.MotorReplicaSetClient)
-    except ImportError as e:
-        if not ok_types:
-            raise e
+    """returns ``True`` if input is pymongo or motor client
+    or any client added with allow_client()"""
     return isinstance(client, ok_types)
+
+
+def allow_client(client_type):
+    """Allows another type to act as client type.
+    Intended for using with mock clients."""
+    global ok_types
+    ok_types += (client_type,)
 
 
 def valid_field(obj, field):
