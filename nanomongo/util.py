@@ -3,6 +3,8 @@ import warnings
 
 import pymongo
 
+from pymongo import son_manipulator
+
 from .errors import ExtraFieldError, ValidationError
 
 ok_types = ()
