@@ -2,6 +2,8 @@ import unittest
 import time
 
 import pymongo
+import tornado.testing
+
 from bson.objectid import ObjectId
 
 from nanomongo.field import Field
@@ -9,24 +11,23 @@ from nanomongo.document import Index, BaseDocument
 
 try:
     import motor
-    MOTOR_CLIENT = motor.MotorClient().open_sync()
-    from .motor_base import async_test_engine, AssertEqual
+    MOTOR_CLIENT = motor.MotorClient()
 except:
     MOTOR_CLIENT = None
 
-    def async_test_engine():
-        return lambda x: x
-    async_test_engine.__test__ = False  # Nose otherwise mistakes it for a test
 
+class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
-class MotorDocumentTestCase(unittest.TestCase):
     def setUp(self):
+        self.io_loop = tornado.ioloop.IOLoop.current()
         pymongo.MongoClient().drop_database('nanotestdb')
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
-    @async_test_engine()
-    def test_insert_find_motor(self, done):
+    @tornado.testing.gen_test
+    def test_insert_find_motor(self):
         """Motor: Test document save, find, find_one"""
+
+        MOTOR_CLIENT = motor.MotorClient(io_loop=self.io_loop)
 
         class Doc(BaseDocument, dot_notation=True, client=MOTOR_CLIENT, db='nanotestdb'):
             foo = Field(str)
@@ -34,17 +35,19 @@ class MotorDocumentTestCase(unittest.TestCase):
 
         col = Doc.get_collection()
         self.assertTrue(isinstance(col, motor.MotorCollection))
-        yield AssertEqual(None, Doc.find_one)
+        result = yield motor.Op(Doc.find_one)
+        self.assertEqual(None, result)
         d = Doc(foo='foo value', bar=42)
         _id = yield motor.Op(d.insert)
         self.assertTrue(isinstance(_id, ObjectId))
-        yield AssertEqual(1, Doc.find({'foo': 'foo value'}).count, None)
-        yield AssertEqual(d, Doc.find_one, {'bar': 42})
-        done()
+        result = yield motor.Op(Doc.find({'foo': 'foo value'}).count)
+        self.assertEqual(1, result)
+        result = yield motor.Op(Doc.find_one, {'bar': 42})
+        self.assertEqual(d, result)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
-    @async_test_engine()
-    def test_partial_update(self, done):
+    @tornado.testing.gen_test
+    def test_partial_update(self):
         """Motor: partial atomic update with save"""
 
         class Doc(BaseDocument, dot_notation=True):
@@ -59,21 +62,23 @@ class MotorDocumentTestCase(unittest.TestCase):
         yield motor.Op(d.insert)
         del d.bar  # unset
         yield motor.Op(d.save)
-        yield AssertEqual(d, Doc.find_one, {'_id': d._id})
+        result = yield motor.Op(Doc.find_one, {'_id': d._id})
+        self.assertEqual(d, result)
         d.foo = 'new foo'
         d['bar'] = 1337
         d.moo = ['moo 0']
         yield motor.Op(d.save, atomic=True)
-        yield AssertEqual(d, Doc.find_one, {'foo': 'new foo', 'bar': 1337})
+        result = yield motor.Op(Doc.find_one, {'foo': 'new foo', 'bar': 1337})
+        self.assertEqual(d, result)
         d.moo = []
         del d['bar']
         yield motor.Op(d.save)
-        yield AssertEqual(d, Doc.find_one, {'_id': d._id})
-        done()
+        result = yield motor.Op(Doc.find_one, {'_id': d._id})
+        self.assertEqual(d, result)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
-    @async_test_engine()
-    def test_index_motor(self, done):
+    @tornado.testing.gen_test
+    def test_index_motor(self):
         """Motor: test index build using motor"""
 
         class Doc(BaseDocument):
@@ -91,4 +96,3 @@ class MotorDocumentTestCase(unittest.TestCase):
         indexes = yield motor.Op(Doc.get_collection().index_information)
         self.assertEqual(2, len(indexes))  # 1 + _id
         self.assertFalse(hasattr(Doc, '__indexes__'))
-        done()
