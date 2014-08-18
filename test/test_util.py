@@ -17,8 +17,7 @@ except:
 
 try:
     import motor
-    MOTOR_CLIENT = motor.MotorClient().open_sync()
-    # from .motor_base import async_test_engine, AssertEqual
+    MOTOR_CLIENT = motor.MotorClient()
 except:
     MOTOR_CLIENT = None
 
