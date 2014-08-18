@@ -1,7 +1,10 @@
 import __main__
+import logging
 import warnings
 
 import pymongo
+
+from pymongo import son_manipulator
 
 from .errors import ExtraFieldError, ValidationError
 
@@ -15,6 +18,9 @@ try:
 except ImportError as e:
     if not ok_types:
         raise e
+
+logging.basicConfig(format='[%(asctime)s] %(levelname)s [%(module)s.%(funcName)s():%(lineno)d] %(message)s')
+logger = logging.getLogger(__file__)
 
 def valid_client(client):
     """returns ``True`` if input is pymongo or motor client
@@ -60,12 +66,11 @@ def check_spec(cls, spec):
     for field in spec.keys():
         f = field.split('.')[0]
         if not cls.nanomongo.has_field(f):
-            warnings.warn(w_field.format(cls, f), RuntimeWarning)
+            logging.warn(w_field.format(cls, f))
         elif '.' in field:
             dtype = cls.nanomongo.fields[f].data_type
             if dtype not in (dict, list):
-                warnings.warn(w_field_type.format(cls, f, (dict, list)),
-                              RuntimeWarning)
+                logging.warn(w_field_type.format(cls, f, (dict, list)))
 
 
 class RecordingDict(dict):

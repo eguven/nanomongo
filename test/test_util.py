@@ -1,5 +1,6 @@
 import unittest
-import warnings
+
+from mock import patch
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
@@ -17,8 +18,7 @@ except:
 
 try:
     import motor
-    MOTOR_CLIENT = motor.MotorClient().open_sync()
-    # from .motor_base import async_test_engine, AssertEqual
+    MOTOR_CLIENT = motor.MotorClient()
 except:
     MOTOR_CLIENT = None
 
@@ -51,14 +51,15 @@ class HelperFuncionsTestCase(unittest.TestCase):
         class Doc(BaseDocument, client=PYMONGO_CLIENT, db='nanotestdb'):
             foo = Field(str)
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter('always')
+        with patch('nanomongo.util.logging') as mock_logging:
             Doc.find({'bar': 42})
-            self.assertTrue(1 == len(w) and 'has no field' in str(w[-1].message))
+            for level in ('debug', 'info', 'error', 'critical'):
+                self.assertFalse(getattr(mock_logging, level).called)
+            self.assertTrue(mock_logging.warn.called)
             Doc.find({'foo.bar': 42})
-            self.assertTrue(2 == len(w) and 'is not of type' in str(w[-1].message))
+            self.assertTrue(mock_logging.warn.called)
             Doc.find_one({'bar.moo': 42})
-            self.assertTrue(3 == len(w) and 'has no field' in str(w[-1].message))
+            self.assertTrue(mock_logging.warn.called)
 
     def test_allow_mock(self):
         class MockClient():

@@ -385,7 +385,13 @@ your document class with client, db, collection.''' % cls
         diff['$set'].update(subdiff['$set'])
         diff['$unset'].update(subdiff['$unset'])
         diff['$addToSet'].update(subdiff['$addToSet'])
-        if not diff['$set'] and not diff['$unset'] and not diff['$addToSet']:
+        # remove empty update ops, MongoDB 2.6 returns error for them
+        diff = dict(filter(lambda update: update[1], diff.items()))
+        # for operation in ('$set', '$unset', '$addToSet'):
+        #     if {} == diff[operation]:
+        #         del diff[operation]
+        if not diff:
+            self.reset_diff()
             return
         response = self.get_collection().update(query, diff, **kwargs)
         self.reset_diff()
