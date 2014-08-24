@@ -111,7 +111,8 @@ class Nanomongo(object):
 
     def register(self, client=None, db_string=None, collection=None):
         """register the class. this is called from defined documents'
-        :meth:`~BaseDocument.register()` method
+        :meth:`~BaseDocument.register()` method. Note that this also
+        runs :meth:`~pymongo.collection.Collection.ensure_index()`
         """
         self.set_client(client) if client else None
         self.set_db(db_string) if db_string else None
