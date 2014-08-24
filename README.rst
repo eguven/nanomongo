@@ -27,10 +27,7 @@ Features
 
 - *upcoming* ``'$push'`` ``'$pull'`` funtionality
 
-
-**note**: nanomongo is in alpha stage and in development, `documentation
-<https://nanomongo.readthedocs.org>`_ is in progress as well::
-
+::
 
     # rough example
     import pymongo
@@ -54,7 +51,7 @@ Features
     Doc.find_one({'foo': 'L33t'})
 
 
-nanomongo is written for Python3 and I intend to support both pymongo & motor
+nanomongo is Python23 compatible and I intend to support both pymongo & motor
 transparently under the hood.
 
 Contributions and insight are welcome!

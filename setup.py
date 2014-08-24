@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import multiprocessing  # http://bugs.python.org/issue15881#msg170215
 
 import nanomongo
+import six
 
 from setuptools import setup
 
@@ -10,10 +12,10 @@ setup(
     version=nanomongo.__version__,
     description='Minimal Python ODM for MongoDB',
     long_description=open('README.rst').read(),
-    author='Eren G\xc3\xbcven',
+    author=six.u('Eren Güven'),
     author_email='erenguven0@gmail.com',
     url='https://github.com/eguven/nanomongo',
-    install_requires=['pymongo >= 2.5'],
+    install_requires=['pymongo >= 2.5', 'six'],
     packages=['nanomongo'],
     setup_requires=['nose'],
     test_suite='nose.main',
