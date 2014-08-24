@@ -191,7 +191,6 @@ class ClientTestCase(unittest.TestCase):
         self.assertFalse(hasattr(dd, 'client') or hasattr(dd, 'db') or
                          hasattr(dd, 'collection'))
 
-
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_configuration(self):
         """Pymongo: Test document misconfiguration eg. client, db, collection"""
