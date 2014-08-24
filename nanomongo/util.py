@@ -22,6 +22,7 @@ except ImportError as e:
 logging.basicConfig(format='[%(asctime)s] %(levelname)s [%(module)s.%(funcName)s():%(lineno)d] %(message)s')
 logger = logging.getLogger(__file__)
 
+
 def valid_client(client):
     """returns ``True`` if input is pymongo or motor client
     or any client added with allow_client()"""

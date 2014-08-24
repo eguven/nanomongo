@@ -1,6 +1,8 @@
 import copy
 import datetime
 
+import six
+
 from bson import DBRef, ObjectId
 
 from .errors import ValidationError
@@ -16,7 +18,8 @@ class Field(object):
         bar = Field(list, required=False)
 
     """
-    allowed_types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
+    allowed_types = (bool, int, float, six.binary_type, six.text_type,
+                     list, dict, datetime.datetime, DBRef, ObjectId)
     # kwarg_name : kwarg_input_validator dictionaries
     allowed_kwargs = {
         'default': lambda v: True,
@@ -73,7 +76,7 @@ class Field(object):
         """Check keyword arguments & their values given to ``Field``
         constructor such as ``default``, ``required`` ...
         """
-        err_str = data_type.__name__ + ': %s argument not allowed or "%s" value invalid'
+        err_str = data_type.__name__ + ': %s keyword argument not allowed or "%s" value invalid'
         for k, v in kwargs.items():
             # kwargs allowed for all data_types
             if k in cls.allowed_kwargs:

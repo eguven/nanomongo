@@ -2,6 +2,7 @@ import unittest
 import time
 
 import pymongo
+import six
 import tornado.testing
 
 from bson.objectid import ObjectId
@@ -29,15 +30,17 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
         MOTOR_CLIENT = motor.MotorClient(io_loop=self.io_loop)
 
-        class Doc(BaseDocument, dot_notation=True, client=MOTOR_CLIENT, db='nanotestdb'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(int, required=False)
+        Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
 
         col = Doc.get_collection()
         self.assertTrue(isinstance(col, motor.MotorCollection))
         result = yield motor.Op(Doc.find_one)
         self.assertEqual(None, result)
-        d = Doc(foo='foo value', bar=42)
+        d = Doc(foo=six.u('foo value'), bar=42)
         _id = yield motor.Op(d.insert)
         self.assertTrue(isinstance(_id, ObjectId))
         result = yield motor.Op(Doc.find({'foo': 'foo value'}).count)
@@ -50,25 +53,26 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
     def test_partial_update(self):
         """Motor: partial atomic update with save"""
 
-        class Doc(BaseDocument, dot_notation=True):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(int, required=False)
             moo = Field(list)
 
         Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
 
-        d = Doc(foo='foo value', bar=42)
+        d = Doc(foo=six.u('foo value'), bar=42)
         d.moo = []
         yield motor.Op(d.insert)
         del d.bar  # unset
         yield motor.Op(d.save)
         result = yield motor.Op(Doc.find_one, {'_id': d._id})
         self.assertEqual(d, result)
-        d.foo = 'new foo'
+        d.foo = six.u('new foo')
         d['bar'] = 1337
         d.moo = ['moo 0']
         yield motor.Op(d.save, atomic=True)
-        result = yield motor.Op(Doc.find_one, {'foo': 'new foo', 'bar': 1337})
+        result = yield motor.Op(Doc.find_one, {'foo': six.u('new foo'), 'bar': 1337})
         self.assertEqual(d, result)
         d.moo = []
         del d['bar']
@@ -82,7 +86,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         """Motor: test index build using motor"""
 
         class Doc(BaseDocument):
-            foo = Field(str)
+            foo = Field(six.text_type)
             __indexes__ = [Index('foo')]
 
         Doc.register(client=MOTOR_CLIENT, db='nanotestdb')

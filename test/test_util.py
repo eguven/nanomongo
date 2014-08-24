@@ -48,7 +48,9 @@ class HelperFuncionsTestCase(unittest.TestCase):
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
     def test_check_spec(self):
         """Test check spec and warning messages"""
-        class Doc(BaseDocument, client=PYMONGO_CLIENT, db='nanotestdb'):
+        class Doc(BaseDocument):
+            client = PYMONGO_CLIENT
+            db = 'nanotestdb'
             foo = Field(str)
 
         with patch('nanomongo.util.logging') as mock_logging:
@@ -69,6 +71,7 @@ class HelperFuncionsTestCase(unittest.TestCase):
         self.assertFalse(valid_client(client))
         allow_client(MockClient)
         self.assertTrue(valid_client(client))
+
 
 class RecordingDictTestCase(unittest.TestCase):
     def test_recording_dict(self):

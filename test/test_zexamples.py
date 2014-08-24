@@ -1,3 +1,5 @@
+from __future__ import unicode_literals
+import six
 import unittest
 
 from examples.example import User, Entry
@@ -19,7 +21,7 @@ class HelperFuncionsTestCase(unittest.TestCase):
             print('{0.name} joined, following: {0.following}'.format(added))
         elif Entry == type(added):
             print('{0.name} > "{1.title}", {1.categories}'.format(args[0], added))
-        elif str == type(added):
+        elif six.text_type == type(added):
             print('{1.name} commented: "{0}"'.format(added, args[0]))
 
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
