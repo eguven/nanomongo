@@ -95,7 +95,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         # before it finishes building on slow systems (travis-ci holla!)
         op = yield motor.Op(Doc.get_collection().database.current_op)
         while op['inprog']:
-            time.sleep(0.1)
+            yield tornado.gen.Task(self.io_loop.call_later, 0.1)
             op = yield motor.Op(Doc.get_collection().database.current_op)
         indexes = yield motor.Op(Doc.get_collection().index_information)
         self.assertEqual(2, len(indexes))  # 1 + _id
