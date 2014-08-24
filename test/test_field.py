@@ -1,6 +1,9 @@
+import copy
 import datetime
 import math
 import unittest
+
+import six
 
 from bson import DBRef, ObjectId
 
@@ -30,7 +33,7 @@ class FieldTestCase(unittest.TestCase):
 
     def test_good_types(self):
         """Test Field definitions with valid types"""
-        types = (bool, int, float, bytes, str, list, dict, datetime.datetime, DBRef, ObjectId)
+        types = copy.copy(Field.allowed_types)
         [Field(t) for t in types]
 
     def test_field_def_arguments(self):
@@ -38,15 +41,15 @@ class FieldTestCase(unittest.TestCase):
         valid_defs = [
             wrap(bool, required=True), wrap(bool, required=False),
             wrap(bool, default=True), wrap(bool, default=False),
-            wrap(str, default='L33t'), wrap(list, default=[]),
-            wrap(str, default=None, required=False),
+            wrap(six.binary_type, default=b'L33t'), wrap(six.text_type, default=six.u('L33t')),
+            wrap(list, default=[]), wrap(six.text_type, default=None, required=False),
             wrap(datetime.datetime, auto_update=True),
         ]
         invalid_defs = [
             wrap(), wrap(bool, default=1), wrap(dict, default=None),
-            wrap(str, required=1), wrap(bytes, default=''),
-            wrap(str, default=b'', required=False),
-            wrap(str, default='', bad_kwarg=True), wrap(int, auto_update=True),
+            wrap(six.text_type, required=1), wrap(six.binary_type, default=six.u('')),
+            wrap(six.text_type, default=b'', required=False),
+            wrap(six.text_type, default='', bad_kwarg=True), wrap(int, auto_update=True),
             wrap(datetime.datetime, auto_update='bad value'),
         ]
         [wrapped() for wrapped in valid_defs]

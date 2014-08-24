@@ -2,6 +2,8 @@ import copy
 import datetime
 import unittest
 
+import six
+
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument, Index
 from nanomongo.errors import *
@@ -25,7 +27,7 @@ class DocumentTestCase(unittest.TestCase):
 
         def bad_field_default():
             class Doc(BaseDocument):
-                foo = Field(str, default=1)
+                foo = Field(six.text_type, default=1)
 
         def bad_field_name():
             class Doc(BaseDocument):
@@ -52,10 +54,12 @@ class DocumentTestCase(unittest.TestCase):
         """Test that :class:`~nanomongo.util.DotNotationMixin` does not
         interfere when attribute access on a non-field name is UnsupportedOperation
         """
-        class Doc(BaseDocument, dot_notation=True):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
 
         d = Doc()
+        self.assertFalse(hasattr(Doc, 'dot_notation') or hasattr(d, 'dot_notation'))
         self.assertRaises(AttributeError, lambda: d.foo)
         d.foo = 42
         self.assertTrue('foo' in d)
@@ -78,11 +82,13 @@ class DocumentTestCase(unittest.TestCase):
         """
 
         class Doc(BaseDocument):
+            # dot_notation = False
             bool_a, bool_b = Field(bool), Field(bool)
             foo = Field(int, default=42)
-            bar = Field(str, default=None, required=False)
+            bar = Field(six.text_type, default=None, required=False)
 
-        class Doc2(Doc, dot_notation=True):
+        class Doc2(Doc):
+            dot_notation = True
             foo = Field(dict)
             zoo = Field(list)
 
@@ -117,10 +123,10 @@ class DocumentTestCase(unittest.TestCase):
     def test_document_dir(self):
         """Test __dir__ functionality"""
         class Doc(BaseDocument):
-            foo = Field(str)
+            foo = Field(six.text_type)
 
         class Doc2(Doc):
-            bar = Field(str, required=False)
+            bar = Field(six.text_type, required=False)
 
         dir_base = BaseDocument()
         dir_doc = Doc()
@@ -133,20 +139,21 @@ class DocumentTestCase(unittest.TestCase):
 class ClientTestCase(unittest.TestCase):
     def test_document_cient_bad(self):
         def bad_client():
-            class Doc(BaseDocument, client=''):
-                pass
+            class Doc(BaseDocument):
+                client = ''
 
         def bad_db():
-            class Doc(BaseDocument, db=1234):
-                pass
+            class Doc(BaseDocument):
+                db = 1234
 
         def bad_col():
-            class Doc(BaseDocument, dot_notation=True, collection=3.14159265):
-                pass
+            class Doc(BaseDocument):
+                dot_notation = True
+                collection = 3.14159265
 
         def db_before_client():
-            class Doc(BaseDocument, db='nanomongotest'):
-                pass
+            class Doc(BaseDocument):
+                db = 'nanomongotest'
 
         [self.assertRaises(TypeError, func) for func in (bad_client, bad_db, bad_col)]
         self.assertRaises(ConfigurationError, db_before_client)
@@ -154,13 +161,19 @@ class ClientTestCase(unittest.TestCase):
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_client(self):
         """Pymongo: Test correct client input and document configuration"""
-        client = pymongo.MongoClient()
+        mclient = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanomongotest'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            client = mclient
+            db = 'nanomongotest'
+            dot_notation = True
+            foo = Field(six.text_type)
 
-        class Doc2(Doc, dot_notation=True, client=client, db='nanomongotest',
-                   collection='othercollection'):
+        class Doc2(Doc):
+            client = mclient
+            db = 'nanomongotest'
+            collection = 'othercollection'
+            dot_notation = True
             bar = Field(int)
 
         class Doc3(Doc):
@@ -170,25 +183,28 @@ class ClientTestCase(unittest.TestCase):
         dd = Doc2()
         ddd = Doc3()
         self.assertEqual(d.nanomongo.client, dd.nanomongo.client)
-        self.assertEqual(client['nanomongotest'], d.nanomongo.database)
-        self.assertEqual(client['nanomongotest'], dd.nanomongo.database)
+        self.assertEqual(mclient['nanomongotest'], d.nanomongo.database)
+        self.assertEqual(mclient['nanomongotest'], dd.nanomongo.database)
         self.assertEqual('doc', d.nanomongo.collection)
         self.assertEqual('othercollection', dd.nanomongo.collection)
         self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
+        self.assertFalse(hasattr(dd, 'client') or hasattr(dd, 'db') or
+                         hasattr(dd, 'collection'))
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_document_configuration(self):
         """Pymongo: Test document misconfiguration eg. client, db, collection"""
-        client = pymongo.MongoClient()
+        mclient = pymongo.MongoClient()
 
         class Doc(BaseDocument):
             pass
 
-        class Doc2(BaseDocument, client=client):
-            pass
+        class Doc2(BaseDocument):
+            client = mclient
 
-        class Doc3(BaseDocument, client=client, db='nanotestdb'):  # autoset
-            pass
+        class Doc3(BaseDocument):  # autoset
+            client = mclient
+            db = 'nanotestdb'
 
         self.assertRaises(ConfigurationError, Doc.get_collection)
         self.assertRaises(ConfigurationError, Doc2.get_collection)
@@ -197,18 +213,19 @@ class ClientTestCase(unittest.TestCase):
         self.assertRaises(ConfigurationError, Doc3.get_collection)
         # register
         self.assertRaises(ConfigurationError, Doc.register)
-        self.assertRaises(ConfigurationError, Doc.register, **{'client': client})
+        self.assertRaises(ConfigurationError, Doc.register, **{'client': mclient})
         self.assertRaises(TypeError, Doc.register,
-                          **{'client': client, 'db': client['nanotestdb']})
+                          **{'client': mclient, 'db': mclient['nanotestdb']})
         self.assertFalse(Doc.nanomongo.registered)
-        Doc.register(client=client, db='nanotestdb')
+        Doc.register(client=mclient, db='nanotestdb')
         self.assertTrue(Doc.nanomongo.registered)
         self.assertRaises(ConfigurationError, Doc.register,
-                          **{'client': client, 'db': 'nanotestdb'})
+                          **{'client': mclient, 'db': 'nanotestdb'})
         m_count = len(Doc.get_collection().database.outgoing_copying_manipulators)
         self.assertEqual(1, m_count)
 
-        Doc2.register(client=client, db='nanotestdb', collection='doc2_collection')
+        Doc2.register(client=mclient, db='nanotestdb', collection='doc2_collection')
+
 
 class MongoDocumentTestCase(unittest.TestCase):
     def setUp(self):
@@ -219,12 +236,14 @@ class MongoDocumentTestCase(unittest.TestCase):
         """Pymongo: Test document insert, find, find_one"""
         client = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(int, required=False)
+        Doc.register(client=client, db='nanotestdb')
 
         self.assertEqual(None, Doc.find_one())
-        d = Doc(foo='foo value')
+        d = Doc(foo=six.u('foo value'))
         d.bar = 'wrong type'
         self.assertRaises(ValidationError, d.insert)
         d.bar = 42
@@ -238,12 +257,14 @@ class MongoDocumentTestCase(unittest.TestCase):
         """Pymongo: Test partial atomic update with save"""
         client = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(int, required=False)
             moo = Field(list)
+        Doc.register(client=client, db='nanotestdb')
 
-        d = Doc(foo='foo value', bar=42)
+        d = Doc(foo=six.u('foo value'), bar=42)
         self.assertRaises(ValidationError, d.save)  # no _id yet
         d['_id'] = bson.objectid.ObjectId()
         self.assertRaises(ValidationError, d.save)  # _id manually set
@@ -253,7 +274,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         del d.bar  # unset
         d.save()
         self.assertEqual(d, Doc.find_one({'_id': d._id}))
-        d.foo = 'new foo'
+        d.foo = six.u('new foo')
         d['bar'] = 1337
         d.moo = ['moo 0']
         d.save(atomic=True)
@@ -279,10 +300,12 @@ class MongoDocumentTestCase(unittest.TestCase):
         """Pymongo: addToSet functionality with `save`"""
         client = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
+        class Doc(BaseDocument):
+            dot_notation = True
             foo = Field(list)
             bar = Field(dict)
-            moo = Field(str)
+            moo = Field(six.text_type)
+        Doc.register(client=client, db='nanotestdb')
 
         self.assertRaises(ValidationError, Doc().addToSet, *('$fail', 42))
         self.assertRaises(ValidationError, Doc().addToSet, *('bar.$1', 42))
@@ -291,14 +314,14 @@ class MongoDocumentTestCase(unittest.TestCase):
         dict.__setitem__(d, 'bar', {})
         self.assertEqual(dict, type(d.bar))  # not RecordingDict
         self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
-        d = Doc(foo=['foo_1', 'foo_2'], bar={'1': 'bar_1', '2': []}, moo='moo val')
+        d = Doc(foo=['foo_1', 'foo_2'], bar={'1': 'bar_1', '2': []}, moo=six.u('moo val'))
         d.insert()
         self.assertRaises(ValidationError, d.addToSet, *('moo', 42))
         self.assertRaises(ValidationError, d.addToSet, *('moo.not_dict', 42))
         self.assertRaises(ValidationError, d.addToSet, *('undefined.field', 42))
         self.assertRaises(UnsupportedOperation, d.addToSet, *('bar.a.b', 42))
         d.addToSet('foo', 'foo_1')
-        d.moo = 'new moo'
+        d.moo = six.u('new moo')
         d.addToSet('foo', 'foo_3')
         d.addToSet('foo', 'foo_1')
         d.addToSet('bar.2', 'L33t')
@@ -332,7 +355,8 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertEqual({'bar': {'1': [42]}}, d.__nanodiff__['$set'])
         self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
 
-        class Doc2(BaseDocument, dot_notation=True):
+        class Doc2(BaseDocument):
+            dot_notation = True
             optional = Field(dict, required=False)
 
         Doc2.register(client=client, db='nanotestdb')
@@ -350,23 +374,25 @@ class MongoDocumentTestCase(unittest.TestCase):
         """Test embedded document diff"""
         client = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(dict)
+        Doc.register(client=client, db='nanotestdb')
 
         d = Doc()
-        d.foo = 'foo value'
+        d.foo = six.u('foo value')
         d.bar = {'sub_a': 'a', 'sub_b': 'b'}
         d.insert()
         self.assertEqual(d, Doc.find_one())
-        d.foo = 'foo value'
+        d.foo = six.u('foo value')
         d.bar['sub_b'] = 'b'  # no change, update will return None
         self.assertEqual(None, d.save())
         d.bar = {'sub_a': 'a', 'sub_b': 'b'}
         self.assertEqual(None, d.save())
         del d.bar['sub_a']
         d.bar['sub_c'] = 'c'
-        d.foo = 'new foo'
+        d.foo = six.u('new foo')
         d.save()
         expected = {'_id': d._id, 'foo': 'new foo',
                     'bar': {'sub_b': 'b', 'sub_c': 'c'}}
@@ -377,13 +403,15 @@ class MongoDocumentTestCase(unittest.TestCase):
         """Test auto_update keyword workings"""
         client = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(datetime.datetime, auto_update=True)
             moo = Field(int, required=False)
+        Doc.register(client=client, db='nanotestdb')
 
         dt = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-        d = Doc(foo='foo value', bar=dt)
+        d = Doc(foo=six.u('foo value'), bar=dt)
         d.insert()
         self.assertTrue(datetime.timedelta(hours=1) < d.bar - dt)
         d.moo = 42
@@ -401,8 +429,9 @@ class IndexTestCase(unittest.TestCase):
 
         self.assertRaises(TypeError, Index)
 
-        class FooDoc(BaseDocument, dot_notation=True):
-            foo = Field(str)
+        class FooDoc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
 
         def bad_def_type_1():  # no fields -> no nanomongo -> no __indexes__ allowed
             class Doc(BaseDocument):
@@ -436,7 +465,7 @@ class IndexTestCase(unittest.TestCase):
 
         def def_mismatch_4():
             class Doc(BaseDocument):
-                foo = Field(str)
+                foo = Field(six.text_type)
                 bar = Field(int)
                 __indexes__ = [
                     Index('foo.fail'),
@@ -457,28 +486,31 @@ class IndexTestCase(unittest.TestCase):
     def test_index_definitions(self):
         client = pymongo.MongoClient()
 
-        class Doc(BaseDocument, dot_notation=True, client=client, db='nanotestdb'):
-            foo = Field(str)
+        class Doc(BaseDocument):
+            dot_notation = True
+            foo = Field(six.text_type)
             bar = Field(int)
             __indexes__ = [
                 Index('foo'),
                 Index([('bar', pymongo.ASCENDING), ('foo', pymongo.DESCENDING)],
                       unique=True),
             ]
+        Doc.register(client=client, db='nanotestdb')
 
         self.assertEqual(3, len(Doc.get_collection().index_information()))  # 2 + _id
 
-        class Doc2(Doc, client=client, db='nanotestdb'):
+        class Doc2(Doc):
             moo = Field(float)
             __indexes__ = [
                 Index('bar'),  # pointless, but index test on superclass field
                 Index([('moo', pymongo.DESCENDING), ('foo', pymongo.ASCENDING)]),
             ]
+        Doc2.register(client=client, db='nanotestdb')
 
         self.assertEqual(3, len(Doc2.get_collection().index_information()))  # 2 + _id
 
         class Doc3(BaseDocument):
-            foo = Field(str)
+            foo = Field(six.text_type)
             __indexes__ = [Index('foo')]
 
         self.assertTrue(hasattr(Doc3, '__indexes__'))

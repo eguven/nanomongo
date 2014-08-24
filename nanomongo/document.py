@@ -1,6 +1,7 @@
 import weakref
 
 import pymongo
+import six
 
 from bson.objectid import ObjectId
 
@@ -79,7 +80,7 @@ class Nanomongo(object):
 
     def set_db(self, db_string):
         """Set database, string expected"""
-        if not db_string or not isinstance(db_string, str):
+        if not db_string or not isinstance(db_string, six.string_types):
             raise TypeError('Exected database string')
         if not self.client:
             raise ConfigurationError('Mongo client not set')
@@ -87,7 +88,7 @@ class Nanomongo(object):
 
     def set_collection(self, col_string):
         """Set collection, string expected"""
-        if not col_string or not isinstance(col_string, str):
+        if not col_string or not isinstance(col_string, six.string_types):
             raise TypeError('Expected collection string')
         self.collection = col_string
 
@@ -110,7 +111,8 @@ class Nanomongo(object):
 
     def register(self, client=None, db_string=None, collection=None):
         """register the class. this is called from defined documents'
-        :meth:`~BaseDocument.register()` method
+        :meth:`~BaseDocument.register()` method. Note that this also
+        runs :meth:`~pymongo.collection.Collection.ensure_index()`
         """
         self.set_client(client) if client else None
         self.set_db(db_string) if db_string else None
@@ -150,6 +152,8 @@ class DocumentMeta(type):
         if '__indexes__' in dct and not isinstance(dct['__indexes__'], list):
             raise TypeError('__indexes__: list of Index instances expected')
         use_dot_notation = kwargs.pop('dot_notation') if 'dot_notation' in kwargs else None
+        if 'dot_notation' in dct:
+            use_dot_notation = dct.pop('dot_notation')
         new_bases = cls._get_bases(bases)
         if use_dot_notation and DotNotationMixin not in new_bases:
             new_bases = (DotNotationMixin,) + new_bases
@@ -171,12 +175,25 @@ class DocumentMeta(type):
                 delattr(cls, field_name)
         # client, database, collection
         cls.nanomongo.classref = weakref.ref(cls)
-        if 'client' in kwargs:
-            cls.nanomongo.set_client(kwargs['client'])
-        if 'db' in kwargs:
-            cls.nanomongo.set_db(kwargs['db'])
-        if 'collection' in kwargs:
-            cls.nanomongo.set_collection(kwargs['collection'])
+
+        def _check_arg(arg):
+            return arg in kwargs or hasattr(cls, arg)
+
+        def _get_arg(arg):
+            """get arg from kwargs or from class attribute and
+            remove class attribute"""
+            if arg in kwargs:
+                return kwargs[arg]
+            retval = getattr(cls, arg)
+            delattr(cls, arg)
+            return retval
+
+        if _check_arg('client'):
+            cls.nanomongo.set_client(_get_arg('client'))
+        if _check_arg('db'):
+            cls.nanomongo.set_db(_get_arg('db'))
+        if _check_arg('collection'):
+            cls.nanomongo.set_collection(_get_arg('collection'))
         else:
             cls.nanomongo.set_collection(name.lower())
         # register if nanomongo config is OK
@@ -202,9 +219,9 @@ class DocumentMeta(type):
             return (cls.nanomongo.has_field(field) and
                     cls.nanomongo.fields[field].data_type in [dict, list])
         i = index.args[0]  # key or list
-        if not isinstance(i, (str, list)):
+        if not isinstance(i, (six.string_types, list)):
             raise TypeError('Index: str or list of key-value tuples expected')
-        if isinstance(i, str) and not valid_index_key(i):
+        if isinstance(i, six.string_types) and not valid_index_key(i):
             raise IndexMismatchError('field for index "%s" does not exist' % i)
         elif isinstance(i, list):
             for tup in i:
@@ -234,7 +251,8 @@ class DocumentMeta(type):
                 yield child_base
 
 
-class BaseDocument(RecordingDict, metaclass=DocumentMeta):
+@six.add_metaclass(DocumentMeta)
+class BaseDocument(RecordingDict):
     """BaseDocument class. Subclasses should be used. See
     :meth:`~BaseDocument.__init__()`
     """

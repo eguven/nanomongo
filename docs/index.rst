@@ -8,9 +8,12 @@ Welcome to nanomongo's documentation!
 
 **nanomongo** is a minimal MongoDB Object-Document Mapper for Python.
 It does not attempt to be a feature-complete ODM but if you like
-using ``pymongo`` api with python ``dict`` and often find yourself
-writing validators and ``pymongo.Collection`` wrappers etc, nanomongo
+using ``pymongo`` api with python dictionaries and often find yourself
+writing validators and ``pymongo.Collection`` wrappers, nanomongo
 might suit your needs.
+
+**Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
+when defining your Document, see `Defining Your Document`_ below).
 
 Installation
 ------------
@@ -19,7 +22,7 @@ Installation
 
     $ pip install nanomongo
 
-**Note**: I recommend installing from GIT repository as long as version is ``0.1``.
+or from git repo:
 
 .. code-block:: console
 
@@ -36,9 +39,17 @@ Defining Your Document
     import pymongo
     from nanomongo import Index, Field, BaseDocument
 
-    client = pymongo.MongoClient()
+    mclient = pymongo.MongoClient()
 
-    class MyDoc(BaseDocument, dot_notation=True, client=client, db='dbname'):
+    class Py23CompatibleDoc(BaseDocument):
+        client = mclient
+        db = 'dbname'
+        dot_notation = True
+        foo = Field(str)
+        bar = Field(int, required=False)
+
+    # Python3 only
+    class Py3Doc(BaseDocument, dot_notation=True, client=mclient, db='dbname'):
         foo = Field(str)
         bar = Field(int, required=False)
 
@@ -47,8 +58,9 @@ Defining Your Document
             Index([('bar', 1), ('foo', -1)], unique=True),
         ]
 
-You don't have to specify ``client`` or ``db`` like this, you can
-:meth:`~.document.BaseDocument.register` your document later as such:
+You don't have to declare ``client`` or ``db`` like this, you can
+:meth:`~.document.BaseDocument.register` (and I definitely prefer it on
+python2) your document later as such:
 
 ::
 
@@ -136,17 +148,17 @@ QuerySpec check
 ^^^^^^^^^^^^^^^
 
 :meth:`~.document.BaseDocument.find()` and :meth:`~.document.BaseDocument.find_one()`
-has a simple check against queries that can not match, displaying warnings. This is
-an experimental feature and at the moment and only does type checks as such:
+has a simple check against queries that can not match, logging warnings. This is
+an experimental feature at the moment and only does type checks as such:
 
-``{'foo': 1}`` will display warnings if
+``{'foo': 1}`` will log warnings if
 
 - Document has no field named ``foo`` (field existence)
 - ``foo`` field is not of type ``int`` (field data type)
 
-or ``{'foo.bar': 1}`` will display warnings if
+or ``{'foo.bar': 1}`` will log warnings if
 
-- ``foo`` field is not of type ``dict`` (dotted field type)
+- ``foo`` field is not of type ``dict`` or ``list`` (dotted field type)
 
 pymongo & motor
 ---------------

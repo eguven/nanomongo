@@ -1,10 +1,13 @@
 language: python
-python:
-  - "3.2"
-  - "3.3"
-  - "3.4"
+matrix:
+  include:
+    - python: "2.7"
+      env: NOSE_IGNORE_FILES=test_py3_sugar.py
+    - python: "3.2"
+    - python: "3.3"
+    - python: "3.4"
 services: mongodb
 install:
   - pip install -r requirements.txt -r requirements-test.txt
   - pip install motor
-script: nosetests
+script: nosetests --with-coverage --cover-package=nanomongo
