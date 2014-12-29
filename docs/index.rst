@@ -12,6 +12,10 @@ using ``pymongo`` api with python dictionaries and often find yourself
 writing validators and ``pymongo.Collection`` wrappers, nanomongo
 might suit your needs.
 
+nanomongo has full test coverage.
+
+**Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>` - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`
+
 **Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
 when defining your Document, see `Defining Your Document`_ below).
 

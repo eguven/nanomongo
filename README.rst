@@ -2,10 +2,18 @@
 nanomongo
 =========
 
-If you like using ``pymongo`` native api but often find yourself subclassing
-``dict`` to add some extra logic and while you're at it, why not add some
-field validations right? And index definitions, and ``pymongo.Collection``
-wrappers, and ... (you get the idea).
+**nanomongo** is a minimal MongoDB Object-Document Mapper for Python.
+It does not attempt to be a feature-complete ODM but if you like
+using ``pymongo`` api with python dictionaries and often find yourself
+writing validators and ``pymongo.Collection`` wrappers, nanomongo
+might suit your needs.
+
+nanomongo has full test coverage.
+
+**Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>` - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`
+
+**Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
+when defining your Document, refer to Documentation)
 
 .. image:: https://travis-ci.org/eguven/nanomongo.png
         :target: https://travis-ci.org/eguven/nanomongo
