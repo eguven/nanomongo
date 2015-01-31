@@ -26,7 +26,8 @@ class Field(object):
         'required': lambda v: isinstance(v, bool),
     }
     extra_kwargs = {
-        datetime.datetime: {'auto_update': lambda v: isinstance(v, bool)}
+        datetime.datetime: {'auto_update': lambda v: isinstance(v, bool)},
+        DBRef: {'document_class': lambda v: isinstance(v, six.string_types)},
     }
 
     def __init__(self, *args, **kwargs):
@@ -52,6 +53,8 @@ class Field(object):
         # attributes
         if 'auto_update' in kwargs and kwargs['auto_update']:
             self.auto_update = self.data_type.utcnow  # datetime.datetime
+        if 'document_class' in kwargs and kwargs['document_class']:
+            self.document_class = kwargs['document_class']
         self.validator = self.generate_validator(self.data_type, **kwargs)
         self.required = kwargs['required'] if 'required' in kwargs else True
         if 'default' in kwargs:

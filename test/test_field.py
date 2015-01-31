@@ -44,6 +44,7 @@ class FieldTestCase(unittest.TestCase):
             wrap(six.binary_type, default=b'L33t'), wrap(six.text_type, default=six.u('L33t')),
             wrap(list, default=[]), wrap(six.text_type, default=None, required=False),
             wrap(datetime.datetime, auto_update=True),
+            wrap(DBRef, document_class='L33tClass'),
         ]
         invalid_defs = [
             wrap(), wrap(bool, default=1), wrap(dict, default=None),
@@ -51,6 +52,7 @@ class FieldTestCase(unittest.TestCase):
             wrap(six.text_type, default=b'', required=False),
             wrap(six.text_type, default='', bad_kwarg=True), wrap(int, auto_update=True),
             wrap(datetime.datetime, auto_update='bad value'),
+            wrap(DBRef, document_class=dict),
         ]
         [wrapped() for wrapped in valid_defs]
         [self.assertRaises(TypeError, wrapped) for wrapped in invalid_defs]
