@@ -106,7 +106,17 @@ class Nanomongo(object):
         to the class we defined, see
         :class:`~nanomongo.util.NanomongoSONManipulator`
         """
-        manipulator = NanomongoSONManipulator(self.classref())
+        if six.PY2:  # unicode -> str implicit transform for binary_type (str) Fields
+            def str_transformer(unicode_str):
+                return unicode_str.encode('utf-8')
+
+            str_fields = ((fname, field) for fname, field in self.fields.items()
+                          if six.binary_type == field.data_type)
+            transforms = dict((fname, str_transformer) for fname, field in str_fields)
+        else:
+            transforms = None
+
+        manipulator = NanomongoSONManipulator(self.classref(), transforms=transforms)
         self.database.add_son_manipulator(manipulator)
 
     def register(self, client=None, db_string=None, collection=None):
