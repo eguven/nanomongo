@@ -3,7 +3,7 @@ import weakref
 import pymongo
 import six
 
-from bson.objectid import ObjectId
+from bson import ObjectId, DBRef
 
 from .errors import *
 from .field import Field
@@ -489,3 +489,8 @@ If you've just set it as a new dict; FYI: you can't $set and $addToSet together'
             # make sure we have no $set or $unset on top_key
             self.check_can_update('$addToSet', top_key)
             top_level_add(self[top_key], deep_key, value)  # add & record
+
+    def get_dbref(self):
+        assert '_id' in self and self['_id'], 'Cannot get DBRef for document with no _id'
+        collection = self.get_collection()
+        return DBRef(collection.name, self['_id'], database=collection.database.name)
