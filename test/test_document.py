@@ -419,6 +419,23 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.save()
         self.assertNotEqual(d.bar, dt_after_insert)
 
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_document_dbref(self):
+        """Test get_dbref functionality"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument):
+            pass
+        Doc.register(client=client, db='nanotestdb')
+
+        d = Doc()
+        self.assertRaises(AssertionError, d.get_dbref)
+        d.insert()
+        dbref = d.get_dbref()
+        self.assertTrue('doc' == dbref.collection and 'nanotestdb' == dbref.database)
+        dd = d.get_collection().database.dereference(dbref)
+        self.assertEqual(d['_id'], dd['_id'])
+
 
 class IndexTestCase(unittest.TestCase):
     def setUp(self):
@@ -532,20 +549,3 @@ class IndexTestCase(unittest.TestCase):
 
         Doc4.register(client=client, db='nanotestdb')
         self.assertEqual(4, len(Doc4.get_collection().index_information()))  # 4 + _id
-
-    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
-    def test_document_dbref(self):
-        """Test get_dbref functionality"""
-        client = pymongo.MongoClient()
-
-        class Doc(BaseDocument):
-            pass
-        Doc.register(client=client, db='nanotestdb')
-
-        d = Doc()
-        self.assertRaises(AssertionError, d.get_dbref)
-        d.insert()
-        dbref = d.get_dbref()
-        self.assertTrue('doc' == dbref.collection and 'nanotestdb' == dbref.database)
-        dd = d.get_collection().database.dereference(dbref)
-        self.assertEqual(d['_id'], dd['_id'])
