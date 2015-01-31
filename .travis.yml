@@ -9,5 +9,7 @@ matrix:
 services: mongodb
 install:
   - pip install -r requirements.txt -r requirements-test.txt
-  - pip install motor
-script: nosetests --with-coverage --cover-package=nanomongo
+  - pip install motor pep8
+script:
+  - "pep8 --ignore=E501 ./nanomongo"
+  - "nosetests --with-coverage --cover-package=nanomongo"
