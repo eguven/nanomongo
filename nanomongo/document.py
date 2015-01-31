@@ -110,9 +110,9 @@ class Nanomongo(object):
             def str_transformer(unicode_str):
                 return unicode_str.encode('utf-8')
 
-            str_fields = filter(lambda (fname, field): six.binary_type == field.data_type,
-                                self.fields.items())
-            transforms = dict(map(lambda (fname, field): (fname, str_transformer), str_fields))
+            str_fields = ((fname, field) for fname, field in self.fields.items()
+                if six.binary_type == field.data_type)
+            transforms = dict((fname, str_transformer) for fname, field in str_fields)
         else:
             transforms = None
 
