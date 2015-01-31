@@ -436,6 +436,22 @@ class MongoDocumentTestCase(unittest.TestCase):
         dd = d.get_collection().database.dereference(dbref)
         self.assertEqual(d['_id'], dd['_id'])
 
+    @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    def test_string_types(self):
+        """Test text type case (as mongodb-pymongo returned string type is always unicode)"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument):
+            foo = Field(six.binary_type)
+            bar = Field(six.text_type)
+        Doc.register(client=client, db='nanotestdb')
+        d = Doc(foo=six.binary_type('value \xc3\xbc'), bar=six.u('value \xfc'))
+        d.insert()
+        dd = Doc.find_one(_id=d['_id'])
+        self.assertEqual(type(d['foo']), type(dd['foo']))
+        self.assertEqual(type(d['bar']), type(dd['bar']))
+        self.assertEqual(dd['foo'].decode('utf-8'), dd['bar'])
+
 
 class IndexTestCase(unittest.TestCase):
     def setUp(self):

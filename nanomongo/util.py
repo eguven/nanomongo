@@ -216,13 +216,19 @@ class NanomongoSONManipulator(pymongo.son_manipulator.SONManipulator):
 
     JIRA: PYTHON-175 PYTHON-215
     """
-    def __init__(self, as_class):
+    def __init__(self, as_class, transforms=None):
         self.as_class = as_class
+        if transforms:
+            assert isinstance(transforms, dict), 'transforms must be a dict'
+            self.transforms = transforms
 
     def will_copy(self):
         return True
 
     def transform_outgoing(self, son, collection):
+        if hasattr(self, 'transforms'):
+            for field, transformer in self.transforms.items():
+                son[field] = transformer(son[field])
         try:
             return self.as_class(son)
         except ExtraFieldError:
