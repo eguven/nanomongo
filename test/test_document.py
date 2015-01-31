@@ -437,6 +437,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertEqual(d['_id'], dd['_id'])
 
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
+    @unittest.skipUnless(six.PY2, 'test irrelevant on PY3')
     def test_string_types(self):
         """Test text type case (as mongodb-pymongo returned string type is always unicode)"""
         client = pymongo.MongoClient()
