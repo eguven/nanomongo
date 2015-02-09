@@ -13,6 +13,17 @@ from .util import (
 )
 
 
+def ref_getter_maker(field_name):
+    """create dereference methods for given ``field_name`` to be bound
+    to Document instances
+    """
+    def ref_getter(self):
+        if field_name not in self or not self[field_name]:
+            raise DBRefNotSetError('"%s" is not set' % field_name)
+        return self.get_collection().database.dereference(self[field_name])
+    return ref_getter
+
+
 class BasesTuple(tuple):
     pass
 
@@ -294,6 +305,11 @@ class BaseDocument(RecordingDict):
             if hasattr(field, 'default_value'):
                 val = field.default_value
                 dict.__setitem__(self, field_name, val() if callable(val) else val)
+            # attach get_<field_name>_field methods for DBRef fields
+            if field.data_type in [DBRef] + DBRef.__subclasses__():
+                getter_name = 'get_%s_field' % field_name
+                getter = ref_getter_maker(field_name)
+                setattr(self, getter_name, six.create_bound_method(getter, self))
         for field_name in kwargs:
             if self.nanomongo.has_field(field_name):
                 self.nanomongo.validate(field_name, kwargs[field_name])

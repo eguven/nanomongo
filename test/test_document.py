@@ -1,5 +1,6 @@
 import copy
 import datetime
+import types
 import unittest
 
 import six
@@ -452,6 +453,24 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertEqual(type(d['foo']), type(dd['foo']))
         self.assertEqual(type(d['bar']), type(dd['bar']))
         self.assertEqual(dd['foo'].decode('utf-8'), dd['bar'])
+
+    def test_dbref_getter_methods(self):
+        """Test the creation and function of ``get_<field_name>_field`` methods"""
+        client = pymongo.MongoClient()
+
+        class Doc(BaseDocument):
+            foo = Field(six.text_type)
+            self = Field(bson.DBRef, required=False)
+        Doc.register(client=client, db='nanotestdb')
+
+        d = Doc(foo=six.text_type('1337'))
+        self.assertTrue(hasattr(d, 'get_self_field'))
+        self.assertTrue(isinstance(d.get_self_field, types.MethodType))
+        self.assertTrue(not hasattr(d, 'get_foo_field'))
+        d.insert()
+        d['self'] = d.get_dbref()
+        d.save()
+        self.assertEqual(d, d.get_self_field())
 
 
 class IndexTestCase(unittest.TestCase):
