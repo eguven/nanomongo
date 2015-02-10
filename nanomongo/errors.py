@@ -22,3 +22,7 @@ class IndexMismatchError(NanomongoError):
 
 class UnsupportedOperation(NanomongoError):
     """Raised when an unsupported opperation/parameters are used"""
+
+
+class DBRefNotSetError(NanomongoError):
+    """Raised when a DBRef getter is called on not-set DBRef field"""

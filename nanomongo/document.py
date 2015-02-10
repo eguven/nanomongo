@@ -1,3 +1,4 @@
+import importlib
 import weakref
 
 import pymongo
@@ -11,6 +12,36 @@ from .util import (
     RecordingDict, DotNotationMixin, valid_client, NanomongoSONManipulator,
     check_spec,
 )
+
+
+def ref_getter_maker(field_name, document_class=None):
+    """create dereference methods for given ``field_name`` to be bound
+    to Document instances
+    """
+    def ref_getter(self):
+        if field_name not in self or not self[field_name]:
+            raise DBRefNotSetError('"%s" field is not set' % field_name)
+        dbref = self[field_name]
+        if document_class is not None:
+            splat = document_class.split('.')
+            class_name = splat.pop()
+            module = '.'.join(splat) if splat else self.__class__.__module__
+            cls = getattr(importlib.import_module(module), class_name)
+        else:
+            database = dbref.database if dbref.database else self.nanomongo.database
+            collection = dbref.collection
+            filter_f = (lambda cls: cls.nanomongo.registered and
+                        cls.nanomongo.database.name == database and
+                        cls.nanomongo.collection == collection)
+            classes = list(filter(filter_f, BaseDocument.__subclasses__()))
+            if 1 != len(classes):
+                err_str = ('can not guess document class for "%s", found: "%s". '
+                           'Please provide document_class kwarg to "%s" Field')
+                raise UnsupportedOperation(err_str % (dbref, classes, field_name))
+            cls = classes.pop()
+        # we don't use dereference since BaseDocument.find_one handles type casting nicely
+        return cls.find_one(_id=dbref.id)
+    return ref_getter
 
 
 class BasesTuple(tuple):
@@ -294,6 +325,12 @@ class BaseDocument(RecordingDict):
             if hasattr(field, 'default_value'):
                 val = field.default_value
                 dict.__setitem__(self, field_name, val() if callable(val) else val)
+            # attach get_<field_name>_field methods for DBRef fields
+            if field.data_type in [DBRef] + DBRef.__subclasses__():
+                getter_name = 'get_%s_field' % field_name
+                doc_class = field.document_class if hasattr(field, 'document_class') else None
+                getter = ref_getter_maker(field_name, document_class=doc_class)
+                setattr(self, getter_name, six.create_bound_method(getter, self))
         for field_name in kwargs:
             if self.nanomongo.has_field(field_name):
                 self.nanomongo.validate(field_name, kwargs[field_name])
