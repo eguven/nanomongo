@@ -2,6 +2,7 @@ import copy
 import datetime
 import types
 import unittest
+import sys
 
 import six
 
@@ -460,18 +461,44 @@ class MongoDocumentTestCase(unittest.TestCase):
 
         class Doc(BaseDocument):
             foo = Field(six.text_type)
-            self = Field(bson.DBRef, required=False)
+            self = Field(bson.DBRef, required=False, document_class='Doc')
+            self2 = Field(bson.DBRef, required=False, document_class='test.test_document.Doc')
+            other = Field(bson.DBRef, required=False)
         Doc.register(client=client, db='nanotestdb')
+        # temporarily attach Doc to module so document class import can find it
+        sys.modules[__name__].Doc = Doc
+
+        # to test DBRef document class auto discover
+        # different naming so it wont clash with other Doc2 defined here
+        class XDoc2(BaseDocument):
+            pass
+        XDoc2.register(client=client, db='nanotestdb')
 
         d = Doc(foo=six.text_type('1337'))
         self.assertTrue(hasattr(d, 'get_self_field'))
         self.assertTrue(isinstance(d.get_self_field, types.MethodType))
         self.assertTrue(not hasattr(d, 'get_foo_field'))
+        self.assertRaises(DBRefNotSetError, d.get_self_field)
         d.insert()
-        d['self'] = d.get_dbref()
+        dd = XDoc2()
+        dd.insert()
+        d['self'], d['self2'] = d.get_dbref(), d.get_dbref()
+        d['other'] = dd.get_dbref()
         d.save()
-        self.assertEqual(d, d.get_self_field())
+        self.assertTrue(d == d.get_self_field() == d.get_self2_field())
+        self.assertEqual({'_id': dd['_id']}, d.get_other_field())  # auto discovered
+        self.assertEqual(Doc, type(d.get_self_field()))
+        self.assertEqual(XDoc2, type(d.get_other_field()))
 
+        # new subclass using same collection as XDoc2 to test undecided discover
+        class Doc3(BaseDocument):
+            pass
+        Doc3.register(client=client, db='nanotestdb', collection='xdoc2')
+
+        self.assertRaises(UnsupportedOperation, d.get_other_field)
+
+        # cleanup
+        del sys.modules[__name__].Doc
 
 class IndexTestCase(unittest.TestCase):
     def setUp(self):
