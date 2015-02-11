@@ -538,6 +538,9 @@ If you've just set it as a new dict; FYI: you can't $set and $addToSet together'
             top_level_add(self[top_key], deep_key, value)  # add & record
 
     def get_dbref(self):
+        """create a ``bson.DBRef`` instance for this :class:`BaseDocument`
+        instance
+        """
         assert '_id' in self and self['_id'], 'Cannot get DBRef for document with no _id'
         collection = self.get_collection()
         return DBRef(collection.name, self['_id'], database=collection.database.name)
