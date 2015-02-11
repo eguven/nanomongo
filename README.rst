@@ -12,6 +12,9 @@ nanomongo has full test coverage.
 
 **Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>`_ - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`_
 
+**Version 0.4**: Utility methods `dbref_field_getters <http://nanomongo.readthedocs.org/en/latest/index.html#dbref_field_getters>`_, `BaseDocument.get_dbref <http://nanomongo.readthedocs.org/en/latest/document.html#nanomongo.document.BaseDocument.get_dbref>`_
+and Bugfix `Python23 text type compatibility <https://github.com/eguven/nanomongo/pull/14>`_
+
 **Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
 when defining your Document, refer to Documentation)
 

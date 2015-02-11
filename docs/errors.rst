@@ -9,3 +9,4 @@
    .. autoclass:: ConfigurationError
    .. autoclass:: IndexMismatchError
    .. autoclass:: UnsupportedOperation
+   .. autoclass:: DBRefNotSetError
