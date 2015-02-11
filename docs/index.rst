@@ -16,6 +16,9 @@ nanomongo has full test coverage.
 
 **Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>`_ - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`_
 
+**Version 0.4**: Utility methods `dbref_field_getters`_, :meth:`~.document.BaseDocument.get_dbref`
+and Bugfix `Python23 text type compatibility <https://github.com/eguven/nanomongo/pull/14>`_
+
 **Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
 when defining your Document, see `Defining Your Document`_ below).
 
@@ -62,7 +65,7 @@ Defining Your Document
             Index([('bar', 1), ('foo', -1)], unique=True),
         ]
 
-You don't have to declare ``client`` or ``db`` like this, you can
+You don't have to declare ``client`` or ``db`` as shown above, you can
 :meth:`~.document.BaseDocument.register` (and I definitely prefer it on
 python2) your document later as such:
 
@@ -88,8 +91,7 @@ unless you explicitly set ``w=0`` ::
 
     doc.foo = 'new foo'  # this change is recorded
     del doc.bar  # this is recored as well
-    doc.save()  # save only does partial updates, the query will be
-    # 
+    doc.save()  # save only does partial updates
 
 :meth:`~.document.BaseDocument.save()` uses ``pymongo.Collection().update()``
 with the changed data. The above will run ::
@@ -102,6 +104,10 @@ Querying
 
     Doc.find({'bar': 42})
     Doc.find_one({'foo': 'new foo'})
+
+:meth:`~.document.BaseDocument.find()` and :meth:`~.document.BaseDocument.find_one()`
+methods are essentially wrappers around respective methods of ``pymongo.Collection()``
+and they take the same arguments.
 
 Extensive Example
 -----------------
@@ -163,6 +169,28 @@ an experimental feature at the moment and only does type checks as such:
 or ``{'foo.bar': 1}`` will log warnings if
 
 - ``foo`` field is not of type ``dict`` or ``list`` (dotted field type)
+
+dbref_field_getters
+-------------------
+
+Documents that define ``bson.DBRef`` fields automatically generate getter methods
+through :func:`nanomongo.document.ref_getter_maker` where the generated methods
+have names such as ``get_<field_name>_field``.
+::
+
+    class MyDoc(BaseDocument):
+        # document_class with full path
+        source = Field(DBRef, document_class='some_module.Source')
+        # must be defined in same module as this will use
+        # mydoc_instance.__class__.__module__
+        destination = Field(DBRef, document_class='Destination')
+        # autodiscover
+        user = Field(DBRef)
+
+nanomongo tries to guess the ``document_class`` if it's not provided by looking at
+registered subclasses of :class:`~.document.BaseDocument`. If it matches two (for example
+when two document classes use the same collection), it will raise
+:class:`~.errors.UnsupportedOperation`.
 
 pymongo & motor
 ---------------

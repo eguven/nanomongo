@@ -20,3 +20,4 @@
    .. automethod:: BaseDocument.insert
    .. automethod:: BaseDocument.save
    .. automethod:: BaseDocument.addToSet
+   .. automethod:: BaseDocument.get_dbref

@@ -9,3 +9,6 @@
       :members:
 
    .. automethod:: RecordingDict.__init__
+
+   .. autoclass:: NanomongoSONManipulator
+ 
