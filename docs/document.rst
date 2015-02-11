@@ -21,3 +21,5 @@
    .. automethod:: BaseDocument.save
    .. automethod:: BaseDocument.addToSet
    .. automethod:: BaseDocument.get_dbref
+
+   .. autofunction:: ref_getter_maker
