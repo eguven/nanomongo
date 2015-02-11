@@ -29,12 +29,6 @@ Installation
 
     $ pip install nanomongo
 
-or from git repo:
-
-.. code-block:: console
-
-    $ pip install git+https://github.com/eguven/nanomongo
-
 Quick Tutorial
 --------------
 
