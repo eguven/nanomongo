@@ -40,7 +40,7 @@ def ref_getter_maker(field_name, document_class=None):
                 raise UnsupportedOperation(err_str % (dbref, classes, field_name))
             cls = classes.pop()
         # we don't use dereference since BaseDocument.find_one handles type casting nicely
-        return cls.find_one(_id=dbref.id)
+        return cls.find_one(dbref.id)
     return ref_getter
 
 
@@ -362,14 +362,14 @@ your document class with client, db, collection.''' % cls
     @classmethod
     def find(cls, *args, **kwargs):
         """``pymongo.Collection().find`` wrapper for this document"""
-        if args:
+        if args and isinstance(args[0], dict):
             check_spec(cls, args[0])
         return cls.get_collection().find(*args, **kwargs)
 
     @classmethod
     def find_one(cls, *args, **kwargs):
         """``pymongo.Collection().find_one`` wrapper for this document"""
-        if args:
+        if args and isinstance(args[0], dict):
             check_spec(cls, args[0])
         return cls.get_collection().find_one(*args, **kwargs)
 

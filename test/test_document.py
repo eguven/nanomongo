@@ -275,16 +275,16 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertEqual(d._id, d.insert())
         del d.bar  # unset
         d.save()
-        self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        self.assertEqual(d, Doc.find_one(d._id))
         d.foo = six.u('new foo')
         d['bar'] = 1337
         d.moo = ['moo 0']
         d.save(atomic=True)
-        self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        self.assertEqual(d, Doc.find_one(d._id))
         d.moo = []
         del d['bar']
         d.save()
-        self.assertEqual(d, Doc.find_one({'_id': d._id}))
+        self.assertEqual(d, Doc.find_one(d._id))
         d['extra_field'] = 'fail'
         self.assertRaises(ValidationError, d.save)
         del d['extra_field']
@@ -450,7 +450,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         Doc.register(client=client, db='nanotestdb')
         d = Doc(foo=six.binary_type('value \xc3\xbc'), bar=six.u('value \xfc'))
         d.insert()
-        dd = Doc.find_one(_id=d['_id'])
+        dd = Doc.find_one(d['_id'])
         self.assertEqual(type(d['foo']), type(dd['foo']))
         self.assertEqual(type(d['bar']), type(dd['bar']))
         self.assertEqual(dd['foo'].decode('utf-8'), dd['bar'])
