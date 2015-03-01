@@ -1,3 +1,3 @@
 from .document import Index, Field, BaseDocument
 
-__version__ = '0.4'
+__version__ = '0.4.1'
