@@ -3,7 +3,7 @@ import unittest
 from nanomongo.document import BaseDocument, Field
 from nanomongo.errors import ConfigurationError
 
-from . import PYMONGO_CLIENT
+from . import PYMONGO_CLIENT, TEST_DBNAME
 
 
 class PY3SugarTestCase(unittest.TestCase):
@@ -24,14 +24,13 @@ class PY3SugarTestCase(unittest.TestCase):
         """Test MongoDB client/db/collection config as class kwargs
         """
 
-        class Doc(BaseDocument, client=PYMONGO_CLIENT, db='nanomongotest'):
+        class Doc(BaseDocument, client=PYMONGO_CLIENT, db=TEST_DBNAME):
             pass
 
-        class Doc2(Doc, dot_notation=True, client=PYMONGO_CLIENT, db='nanomongotest', collection='othercollection'):
+        class Doc2(Doc, dot_notation=True, client=PYMONGO_CLIENT, db=TEST_DBNAME, collection='othercollection'):
             pass
 
         self.assertTrue(Doc.nanomongo.registered)
-        self.assertEqual(PYMONGO_CLIENT.nanomongotest.doc, Doc.get_collection())
-        self.assertRaises(ConfigurationError, Doc.register,
-                          **{'client': PYMONGO_CLIENT, 'db': 'nanomongotest'})
-        self.assertEqual(PYMONGO_CLIENT.nanomongotest.othercollection, Doc2.get_collection())
+        self.assertEqual(PYMONGO_CLIENT[TEST_DBNAME].doc, Doc.get_collection())
+        self.assertRaises(ConfigurationError, Doc.register, **{'client': PYMONGO_CLIENT, 'db': TEST_DBNAME})
+        self.assertEqual(PYMONGO_CLIENT[TEST_DBNAME].othercollection, Doc2.get_collection())

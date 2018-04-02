@@ -14,7 +14,7 @@ from nanomongo.errors import (
     ConfigurationError, DBRefNotSetError, ExtraFieldError, UnsupportedOperation, ValidationError,
 )
 
-from . import PYMONGO_CLIENT
+from . import PYMONGO_CLIENT, TEST_DBNAME
 
 
 class DocumentTestCase(unittest.TestCase):
@@ -152,7 +152,7 @@ class ClientTestCase(unittest.TestCase):
 
         def db_before_client():
             class Doc(BaseDocument):
-                db = 'nanomongotest'
+                db = TEST_DBNAME
 
         [self.assertRaises(TypeError, func) for func in (bad_client, bad_db, bad_col)]
         self.assertRaises(ConfigurationError, db_before_client)
@@ -163,13 +163,13 @@ class ClientTestCase(unittest.TestCase):
 
         class Doc(BaseDocument):
             client = PYMONGO_CLIENT
-            db = 'nanomongotest'
+            db = TEST_DBNAME
             dot_notation = True
             foo = Field(six.text_type)
 
         class Doc2(Doc):
             client = PYMONGO_CLIENT
-            db = 'nanomongotest'
+            db = TEST_DBNAME
             collection = 'othercollection'
             dot_notation = True
             bar = Field(int)
@@ -181,8 +181,8 @@ class ClientTestCase(unittest.TestCase):
         dd = Doc2()
         ddd = Doc3()
         self.assertEqual(d.nanomongo.client, dd.nanomongo.client)
-        self.assertEqual(PYMONGO_CLIENT['nanomongotest'], d.nanomongo.database)
-        self.assertEqual(PYMONGO_CLIENT['nanomongotest'], dd.nanomongo.database)
+        self.assertEqual(PYMONGO_CLIENT[TEST_DBNAME], d.nanomongo.database)
+        self.assertEqual(PYMONGO_CLIENT[TEST_DBNAME], dd.nanomongo.database)
         self.assertEqual('doc', d.nanomongo.collection)
         self.assertEqual('othercollection', dd.nanomongo.collection)
         self.assertNotEqual(d.nanomongo.client, ddd.nanomongo.client)
@@ -201,7 +201,7 @@ class ClientTestCase(unittest.TestCase):
 
         class Doc3(BaseDocument):  # autoset
             client = PYMONGO_CLIENT
-            db = 'nanotestdb'
+            db = TEST_DBNAME
 
         self.assertRaises(ConfigurationError, Doc.get_collection)
         self.assertRaises(ConfigurationError, Doc2.get_collection)
@@ -212,21 +212,21 @@ class ClientTestCase(unittest.TestCase):
         self.assertRaises(ConfigurationError, Doc.register)
         self.assertRaises(ConfigurationError, Doc.register, **{'client': PYMONGO_CLIENT})
         self.assertRaises(TypeError, Doc.register,
-                          **{'client': PYMONGO_CLIENT, 'db': PYMONGO_CLIENT['nanotestdb']})
+                          **{'client': PYMONGO_CLIENT, 'db': PYMONGO_CLIENT[TEST_DBNAME]})
         self.assertFalse(Doc.nanomongo.registered)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         self.assertTrue(Doc.nanomongo.registered)
         self.assertRaises(ConfigurationError, Doc.register,
-                          **{'client': PYMONGO_CLIENT, 'db': 'nanotestdb'})
+                          **{'client': PYMONGO_CLIENT, 'db': TEST_DBNAME})
         m_count = len(Doc.get_collection().database.outgoing_copying_manipulators)
         self.assertEqual(1, m_count)
 
-        Doc2.register(client=PYMONGO_CLIENT, db='nanotestdb', collection='doc2_collection')
+        Doc2.register(client=PYMONGO_CLIENT, db=TEST_DBNAME, collection='doc2_collection')
 
 
 class MongoDocumentTestCase(unittest.TestCase):
     def setUp(self):
-        PYMONGO_CLIENT.drop_database('nanotestdb')
+        PYMONGO_CLIENT.drop_database(TEST_DBNAME)
 
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
     def test_insert_find(self):
@@ -236,7 +236,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             dot_notation = True
             foo = Field(six.text_type)
             bar = Field(int, required=False)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         self.assertEqual(None, Doc.find_one())
         d = Doc(foo=six.u('foo value'))
@@ -257,7 +257,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             foo = Field(six.text_type)
             bar = Field(int, required=False)
             moo = Field(list)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         d = Doc(foo=six.u('foo value'), bar=42)
         self.assertRaises(ValidationError, d.save)  # no _id yet
@@ -299,7 +299,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             foo = Field(list)
             bar = Field(dict)
             moo = Field(six.text_type)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         self.assertRaises(ValidationError, Doc().addToSet, *('$fail', 42))
         self.assertRaises(ValidationError, Doc().addToSet, *('bar.$1', 42))
@@ -353,7 +353,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             dot_notation = True
             optional = Field(dict, required=False)
 
-        Doc2.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc2.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         dd = Doc2()
         dd.insert()
         # addToSet on unset field
@@ -371,7 +371,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             dot_notation = True
             foo = Field(six.text_type)
             bar = Field(dict)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         d = Doc()
         d.foo = six.u('foo value')
@@ -400,7 +400,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             foo = Field(six.text_type)
             bar = Field(datetime.datetime, auto_update=True)
             moo = Field(int, required=False)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         dt = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
         d = Doc(foo=six.u('foo value'), bar=dt)
@@ -417,13 +417,13 @@ class MongoDocumentTestCase(unittest.TestCase):
 
         class Doc(BaseDocument):
             pass
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         d = Doc()
         self.assertRaises(AssertionError, d.get_dbref)
         d.insert()
         dbref = d.get_dbref()
-        self.assertTrue('doc' == dbref.collection and 'nanotestdb' == dbref.database)
+        self.assertTrue('doc' == dbref.collection and TEST_DBNAME == dbref.database)
         dd = d.get_collection().database.dereference(dbref)
         self.assertEqual(d['_id'], dd['_id'])
 
@@ -435,7 +435,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         class Doc(BaseDocument):
             foo = Field(six.binary_type)
             bar = Field(six.text_type)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         d = Doc(foo=six.binary_type('value \xc3\xbc'), bar=six.u('value \xfc'))
         d.insert()
         dd = Doc.find_one(d['_id'])
@@ -451,7 +451,7 @@ class MongoDocumentTestCase(unittest.TestCase):
             self = Field(bson.DBRef, required=False, document_class='Doc')
             self2 = Field(bson.DBRef, required=False, document_class='test.test_document.Doc')
             other = Field(bson.DBRef, required=False)
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         # temporarily attach Doc to module so document class import can find it
         sys.modules[__name__].Doc = Doc
 
@@ -459,7 +459,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         # different naming so it wont clash with other Doc2 defined here
         class XDoc2(BaseDocument):
             pass
-        XDoc2.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        XDoc2.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         d = Doc(foo=six.text_type('1337'))
         self.assertTrue(hasattr(d, 'get_self_field'))
@@ -480,7 +480,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         # new subclass using same collection as XDoc2 to test undecided discover
         class Doc3(BaseDocument):
             pass
-        Doc3.register(client=PYMONGO_CLIENT, db='nanotestdb', collection='xdoc2')
+        Doc3.register(client=PYMONGO_CLIENT, db=TEST_DBNAME, collection='xdoc2')
 
         self.assertRaises(UnsupportedOperation, d.get_other_field)
 
@@ -491,7 +491,7 @@ class MongoDocumentTestCase(unittest.TestCase):
 class IndexTestCase(unittest.TestCase):
     def setUp(self):
         if PYMONGO_CLIENT:
-            PYMONGO_CLIENT.drop_database('nanotestdb')
+            PYMONGO_CLIENT.drop_database(TEST_DBNAME)
 
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
     def test_index_definitions(self):
@@ -506,7 +506,7 @@ class IndexTestCase(unittest.TestCase):
                     [('bar', pymongo.ASCENDING), ('foo', pymongo.DESCENDING)],
                     unique=True),
             ]
-        Doc.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         self.assertEqual(3, len(Doc.get_collection().index_information()))  # 2 + _id
 
         # compare defines indexes vs indexes retured from the database
@@ -522,5 +522,5 @@ class IndexTestCase(unittest.TestCase):
             __indexes__ = [
                 pymongo.IndexModel('bar'),  # index test on superclass field
             ]
-        Doc2.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Doc2.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         self.assertEqual(2, len(Doc2.get_collection().index_information()))  # 1 + _id

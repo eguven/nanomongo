@@ -6,3 +6,5 @@ try:
     PYMONGO_CLIENT.admin.command('ismaster')
 except pymongo.errors.ServerSelectionTimeoutError:
     PYMONGO_CLIENT = None
+
+TEST_DBNAME = 'nanotestdb'

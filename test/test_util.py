@@ -10,7 +10,7 @@ from nanomongo.util import (
 )
 from nanomongo.errors import ValidationError
 
-from . import PYMONGO_CLIENT
+from . import PYMONGO_CLIENT, TEST_DBNAME
 
 try:
     import motor
@@ -45,7 +45,7 @@ class HelperFuncionsTestCase(unittest.TestCase):
         """Test check spec and warning messages"""
         class Doc(BaseDocument):
             client = PYMONGO_CLIENT
-            db = 'nanotestdb'
+            db = TEST_DBNAME
             foo = Field(str)
 
         with patch('nanomongo.util.logging') as mock_logging:

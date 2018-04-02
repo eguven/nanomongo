@@ -6,13 +6,13 @@ import six
 
 from examples.example import User, Entry
 
-from . import PYMONGO_CLIENT
+from . import PYMONGO_CLIENT, TEST_DBNAME
 
 
 class HelperFuncionsTestCase(unittest.TestCase):
     def setUp(self):
-        User.register(client=PYMONGO_CLIENT, db='nanotestdb')
-        Entry.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        User.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
+        Entry.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         User.get_collection().delete_many({})
         Entry.get_collection().delete_many({})
 
