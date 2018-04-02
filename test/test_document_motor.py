@@ -1,3 +1,4 @@
+import os
 import unittest
 import time
 
@@ -16,6 +17,8 @@ try:
 except:
     MOTOR_CLIENT = None
 
+SKIP_MOTOR = bool(os.environ.get('NANOMONGO_SKIP_MOTOR'))
+
 
 class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
@@ -24,6 +27,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         pymongo.MongoClient().drop_database('nanotestdb')
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
     @tornado.testing.gen_test
     def test_insert_find_motor(self):
         """Motor: Test document save, find, find_one"""
@@ -49,6 +53,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         self.assertEqual(d, result)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
     @tornado.testing.gen_test
     def test_partial_update(self):
         """Motor: partial atomic update with save"""
@@ -81,6 +86,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         self.assertEqual(d, result)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
     @tornado.testing.gen_test
     def test_index_motor(self):
         """Motor: test index build using motor"""
