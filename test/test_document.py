@@ -261,7 +261,7 @@ class MongoDocumentTestCase(unittest.TestCase):
 
         d = Doc(foo=six.u('foo value'), bar=42)
         self.assertRaises(ValidationError, d.save)  # no _id yet
-        d['_id'] = bson.objectid.ObjectId()
+        d['_id'] = bson.ObjectId()
         self.assertRaises(ValidationError, d.save)  # _id manually set
         self.assertRaises(ValidationError, d.insert)  # missing field moo
         d.moo = []

@@ -83,7 +83,7 @@ class Entry(BaseDocument):
     'user' + '_id' so we can chronologically sort entries by user
     """
     dot_notation = True
-    user = Field(bson.objectid.ObjectId)
+    user = Field(bson.ObjectId)
     title = Field(six.text_type)
     categories = Field(list, default=[])
     comments = Field(list, default=[])

@@ -61,11 +61,11 @@ def check_spec(cls, spec):
     for field in spec.keys():
         f = field.split('.')[0]
         if not cls.nanomongo.has_field(f):
-            logging.warn(w_field.format(cls, f))
+            logging.warning(w_field.format(cls, f))
         elif '.' in field:
             dtype = cls.nanomongo.fields[f].data_type
             if dtype not in (dict, list):
-                logging.warn(w_field_type.format(cls, f, (dict, list)))
+                logging.warning(w_field_type.format(cls, f, (dict, list)))
 
 
 class RecordingDict(dict):

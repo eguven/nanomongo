@@ -1,11 +1,10 @@
 import os
 import unittest
 
+import bson
 import pymongo
 import six
 import tornado.testing
-
-from bson.objectid import ObjectId
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
@@ -47,7 +46,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         self.assertEqual(None, result)
         d = Doc(foo=six.u('foo value'), bar=42)
         _id = yield motor.Op(d.insert)
-        self.assertTrue(isinstance(_id, ObjectId))
+        self.assertTrue(isinstance(_id, bson.ObjectId))
         result = yield motor.Op(Doc.find({'foo': 'foo value'}).count)
         self.assertEqual(1, result)
         result = yield motor.Op(Doc.find_one, {'bar': 42})

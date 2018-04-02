@@ -52,11 +52,11 @@ class HelperFuncionsTestCase(unittest.TestCase):
             Doc.find({'bar': 42})
             for level in ('debug', 'info', 'error', 'critical'):
                 self.assertFalse(getattr(mock_logging, level).called)
-            self.assertTrue(mock_logging.warn.called)
+            self.assertTrue(mock_logging.warning.called)
             Doc.find({'foo.bar': 42})
-            self.assertTrue(mock_logging.warn.called)
+            self.assertTrue(mock_logging.warning.called)
             Doc.find_one({'bar.moo': 42})
-            self.assertTrue(mock_logging.warn.called)
+            self.assertTrue(mock_logging.warning.called)
 
     def test_allow_mock(self):
         class MockClient():
