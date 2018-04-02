@@ -18,26 +18,23 @@ logger = logging.getLogger(__file__)
 
 
 def valid_client(client):
-    """returns ``True`` if input is pymongo or motor client
-    or any client added with allow_client()"""
+    """Returns ``True`` if input is a pymongo or motor client or any client added with allow_client()."""
     return isinstance(client, ok_types)
 
 
 def allow_client(client_type):
-    """Allows another type to act as client type.
-    Intended for using with mock clients."""
+    """Allows another type to act as client type. Intended for using with mock clients."""
     global ok_types
     ok_types += (client_type,)
 
 
 def valid_field(obj, field):
+    """Returns ``True`` if given object (BaseDocument subclass or an instance thereof) has given field defined."""
     return object.__getattribute__(obj, 'nanomongo').has_field(field)
 
 
 def check_keys(dct):
-    """Recursively check against '.' and '$' at start position in
-    dictionary keys
-    """
+    """Recursively check against '.' and '$' at start position in dictionary keys."""
     if not isinstance(dct, dict):
         raise TypeError('dict-like argument expected')
     dot_err_str = 'MongoDB does not allow . in field names. "%s"'
@@ -53,7 +50,7 @@ def check_keys(dct):
 
 def check_spec(cls, spec):
     """
-    Check the query spec for given class and log warnings. This isn't extensive, helpful to catch mistyped queries
+    Check the query spec for given class and log warnings. Not extensive, helpful to catch mistyped queries.
 
     * Dotted keys (eg. ``{'foo.bar': 1}``) in spec are checked for top-level (ie. ``foo``) field existence
     * Dotted keys are also checked for their top-level field type (must be ``dict`` or ``list``)
@@ -78,9 +75,10 @@ def check_spec(cls, spec):
 
 
 class RecordingDict(dict):
-    """A dictionary subclass modifying :meth:`~__setitem__()` and
-    :meth:`~__delitem__()` methods to record changes in its
-    :attr:`~__nanodiff__` attribute"""
+    """
+    A dict subclass modifying ``dict.__setitem__()`` and ``dict.__delitem__()`` methods to record changes
+    internally in its ``__nanodiff__`` attribute.
+    """
     def __init__(self, *args, **kwargs):
         super(RecordingDict, self).__init__(*args, **kwargs)
         self.__nanodiff__ = {
@@ -88,7 +86,7 @@ class RecordingDict(dict):
         }
 
     def __setitem__(self, key, value):
-        """Override :meth:`~dict.__setitem__` so we can track changes"""
+        """Override the dict method so we can track changes."""
         try:
             skip = self[key] == value
         except KeyError:
@@ -101,15 +99,15 @@ class RecordingDict(dict):
         self.clean_other_modifiers('$set', key)
 
     def __delitem__(self, key):
-        """Override :meth:`~dict.__delitem__` so we can track changes"""
+        """Override the dict method so we can track changes."""
         super(RecordingDict, self).__delitem__(key)
         self.__nanodiff__['$unset'][key] = 1
         self.clean_other_modifiers('$unset', key)
 
     def clean_other_modifiers(self, current_mod, field_name):
-        """Given `current_mod`, removes other `field_name` modifiers,
-        eg. when called with `$set`, removes `$unset` and `$addToSet`
-        etc. on `field_name`
+        """
+        Given ``current_mod``, removes other ``field_name`` modifiers, eg. when called with ``$set``,
+        removes ``$unset`` and ``$addToSet`` etc. on ``field_name``.
         """
         for mod, updates in self.__nanodiff__.items():
             if mod == current_mod:
@@ -118,8 +116,9 @@ class RecordingDict(dict):
                 del self.__nanodiff__[mod][field_name]
 
     def reset_diff(self):
-        """reset `__nanodiff__` recursively; to be used after saving
-        diffs. This does NOT do a rollback. Reload from db for that
+        """
+        Reset ``__nanodiff__`` recursively. To be used after saving diffs.
+        This does NOT do a rollback. Reload from db for that.
         """
         nanodiff_base = {'$set': {}, '$unset': {}, '$addToSet': {}}
         self.__nanodiff__ = nanodiff_base
@@ -128,9 +127,9 @@ class RecordingDict(dict):
                 field_value.reset_diff()
 
     def get_sub_diff(self):
-        """get `__nanodiff__` from embedded documents. Find fields of
-        :class:`~RecordingDict` type, iterate over their diff and build dotted
-        keys for top level diff
+        """
+        Find fields of :class:`~RecordingDict` type, iterate over their diff and build dotted
+        keys to be merged into top level diff.
         """
         diff = {'$set': {}, '$unset': {}, '$addToSet': {}}
         for field_name, field_value in self.items():
@@ -152,7 +151,7 @@ class RecordingDict(dict):
     def check_can_update(self, modifier, field_name):
         """Check if given `modifier` `field_name` combination can be
         added. MongoDB does not allow field duplication with update
-        modifiers. This is to be used with methods `addToSet` ...
+        modifiers. This is to be used with methods :meth:`~.document.BaseDocument.addToSet()` ...
         """
         for mod, updates in self.__nanodiff__.items():
             if mod == modifier:

@@ -332,16 +332,20 @@ your document class with client, db, collection.''' % cls
         return sorted(dir(super(BaseDocument, self)) + self.nanomongo.list_fields())
 
     def validate(self):
-        """Override this to add extra document validation, will be
-        called at the end of :meth:`~validate_all()` """
+        """
+        **Override** this to add extra document validation. It will be called during
+        :meth:`~insert` and :meth:`~save` before the database operation.
+        """
         pass
 
     def validate_all(self):
-        """Check against extra fields, run field validators and
-        user-defined :meth:`~validate()` """
-        for field, value in self.items():
-            if not self.nanomongo.has_field(field):
-                raise ValidationError('extra field "%s" with value "%s"' % (field, value))
+        """
+        Check correctness of the document before :meth:`~insert()`. Ensure that
+
+        * no extra (undefined) fields are present
+        * field values are of correct data type
+        * required fields are present
+        """
         for field_name, field in self.nanomongo.fields.items():
             if field_name in self:
                 field.validator(self[field_name], field_name=field_name)
@@ -350,8 +354,13 @@ your document class with client, db, collection.''' % cls
         return self.validate()
 
     def validate_diff(self):
-        """Check correctness of diffs before partial update, also run
-        user-defined :meth:`~validate()` """
+        """
+        Check correctness of diffs (ie. ``$set`` and ``$unset``) before :meth:`~save()`. Ensure that
+        
+        * no extra (undefined) fields are present for either set or unset
+        * field values are of correct data type
+        * required fields are not unset
+        """
         sets = self.__nanodiff__['$set']
         unsets = self.__nanodiff__['$unset']
         for field_name, field_value in unsets.items():
@@ -367,15 +376,16 @@ your document class with client, db, collection.''' % cls
         return self.validate()
 
     def run_auto_updates(self):
-        """Runs functions in :attr:`nanomongo.transforms` like
-        auto_update stuff before :meth:`~insert()` :meth:`~save()`
-        """
+        """Runs auto_update functions in ``.nanomongo.transforms``."""
+        # TODO: This would override any preceding $set on the field
         for field_name, updater in self.nanomongo.transforms.items():
             self[field_name] = updater()
 
     def insert(self, **kwargs):
-        """Insert document into database, return _id. Runs
-        :meth:`~run_auto_updates()` and :meth:`~validate_all()` """
+        """
+        Runs auto updates, validates the document, and inserts into database.
+        Returns ``pymongo.results.InsertOneResult``.
+        """
         self.run_auto_updates()
         self.validate_all()
         id_or_ids = self.get_collection().insert_one(self, **kwargs)
@@ -386,9 +396,9 @@ your document class with client, db, collection.''' % cls
         return id_or_ids
 
     def save(self, **kwargs):
-        """Saves document. This method only does partial updates and no
-        inserts. Runs :meth:`~run_auto_updates()` and :meth:`~validate_all()`
-        prior to save. Returns ``Collection.update()`` response
+        """
+        Runs auto updates, validates the document, and saves the changes into database.
+        Returns ``pymongo.results.UpdateResult``.
         """
         if '_id' not in self:
             raise ValidationError('insert first; save does partial updates')
@@ -417,23 +427,23 @@ your document class with client, db, collection.''' % cls
         return response
 
     def addToSet(self, field, value):
-        """MongoDB ``Collection.update()`` $addToSet functionality.
-        This sets the value accordingly and records the change in
-        :attr:`~__nanodiff__` to be saved with :meth:`~save()`.
+        """
+        Explicitly defined ``$addToSet`` functionality. This sets/updates the field value accordingly
+        and records the change to be saved with :meth:`~save()`.
         ::
 
             # MongoDB style dot notation can be used to add to lists
             # in embedded documents
             doc = Doc(foo=[], bar={})
             doc.addToSet('foo', new_value)
-            doc.addToSet('bar.sub_field', new_value)
 
-        Contrary to how $set has no effect under __setitem__ (see
-        :class:`~.util.RecordingDict`.__setitem__) when the
-        new value is equal to the current; $addToSet explicitly adds
-        the call to :attr:`~__nanodiff__` so it will be sent to the
-        database when :meth:`save()` is called.
+        Contrary to how ``$set`` ing the same value has no effect under __setitem__ (see
+        ``.util.RecordingDict.__setitem__()``), when the new value is equal to the current;
+        ``addToSet()`` explicitly records the change so it will be sent to the
+        database when :meth:`~save()` is called.
         """
+        # TODO: rename to add_to_set
+        # TODO: doc.addToSet('bar.sub_field', new_value) doesn't actually work
         def top_level_add(self, field, value):
             """add the value to field. appending if the list exists and
             does not contain the value; create new list otherwise.
@@ -492,9 +502,7 @@ If you've just set it as a new dict; FYI: you can't $set and $addToSet together'
             top_level_add(self[top_key], deep_key, value)  # add & record
 
     def get_dbref(self):
-        """create a ``bson.DBRef`` instance for this :class:`BaseDocument`
-        instance
-        """
+        """Return a ``bson.DBRef`` instance for this :class:`~BaseDocument` instance"""
         assert '_id' in self and self['_id'], 'Cannot get DBRef for document with no _id'
         collection = self.get_collection()
         return DBRef(collection.name, self['_id'], database=collection.database.name)
