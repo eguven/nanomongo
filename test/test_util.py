@@ -44,19 +44,31 @@ class HelperFuncionsTestCase(unittest.TestCase):
     def test_check_spec(self):
         """Test check spec and warning messages"""
         class Doc(BaseDocument):
-            client = PYMONGO_CLIENT
-            db = TEST_DBNAME
             foo = Field(str)
+            foo_list = Field(list)
+            foo_dict = Field(dict)
+        Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         with patch('nanomongo.util.logging') as mock_logging:
-            Doc.find({'bar': 42})
-            for level in ('debug', 'info', 'error', 'critical'):
-                self.assertFalse(getattr(mock_logging, level).called)
+            Doc.find({'bar': 42})  # field doesn't exist
             self.assertTrue(mock_logging.warning.called)
-            Doc.find({'foo.bar': 42})
+        with patch('nanomongo.util.logging') as mock_logging:
+            Doc.find({'bar.foo': 42})  # field doesn't exist
             self.assertTrue(mock_logging.warning.called)
-            Doc.find_one({'bar.moo': 42})
+        with patch('nanomongo.util.logging') as mock_logging:
+            Doc.find({'foo': 42})  # field type mismatch
             self.assertTrue(mock_logging.warning.called)
+        with patch('nanomongo.util.logging') as mock_logging:
+            Doc.find({'foo.bar': 42})  # field not dict/list
+            self.assertTrue(mock_logging.warning.called)
+            # OK cases
+        with patch('nanomongo.util.logging') as mock_logging:
+            Doc.find({'foo': '42'})
+            self.assertFalse(mock_logging.warning.called)
+            Doc.find({'foo_list.foo': 42})
+            self.assertFalse(mock_logging.warning.called)
+            Doc.find({'foo_dict.foo': 42})
+            self.assertFalse(mock_logging.warning.called)
 
     def test_allow_mock(self):
         class MockClient():

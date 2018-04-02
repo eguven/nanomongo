@@ -140,17 +140,8 @@ QuerySpec check
 ^^^^^^^^^^^^^^^
 
 :meth:`~.document.BaseDocument.find()` and :meth:`~.document.BaseDocument.find_one()`
-has a simple check against queries that can not match, logging warnings. This is
-an experimental feature at the moment and only does type checks as such:
-
-``{'foo': 1}`` will log warnings if
-
-- Document has no field named ``foo`` (field existence)
-- ``foo`` field is not of type ``int`` (field data type)
-
-or ``{'foo.bar': 1}`` will log warnings if
-
-- ``foo`` field is not of type ``dict`` or ``list``
+runs a simple check against queries and logs warnings for queries that can not match.
+See :func:`~.util.check_spec()` for details.
 
 dbref_field_getters
 ^^^^^^^^^^^^^^^^^^^

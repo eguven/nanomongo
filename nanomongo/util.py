@@ -52,20 +52,29 @@ def check_keys(dct):
 
 
 def check_spec(cls, spec):
-    """Check the query spec for given class and log warnings.
-    Dotted keys are checked for top-level field existence and its type
-    being dict/list. Normal keys are checked for field existence only.
     """
-    w_field = '{0} has no field "{1}", can not match'
-    w_field_type = '{0} field "{1}" is not of type {2}, can not match'
-    for field in spec.keys():
+    Check the query spec for given class and log warnings. This isn't extensive, helpful to catch mistyped queries
+
+    * Dotted keys (eg. ``{'foo.bar': 1}``) in spec are checked for top-level (ie. ``foo``) field existence
+    * Dotted keys are also checked for their top-level field type (must be ``dict`` or ``list``)
+    * Normal keys (eg. ``{'foo': 1}``) in spec are checked for top-level (ie. ``foo``) field existence
+    * Normal keys with non-dict queries (ie. not something like ``{'foo': {'$gte': 0, '$lte': 1}}``) are also
+      checked for their data type
+    """
+    for field, query in spec.items():
         f = field.split('.')[0]
-        if not cls.nanomongo.has_field(f):
-            logging.warning(w_field.format(cls, f))
-        elif '.' in field:
-            dtype = cls.nanomongo.fields[f].data_type
-            if dtype not in (dict, list):
-                logging.warning(w_field_type.format(cls, f, (dict, list)))
+        if not cls.nanomongo.has_field(f):  # field existence
+            logging.warning('%s has no field "%s" defined, spec %s can not match', cls, f, spec)
+            continue
+
+        dtype = cls.nanomongo.fields[f].data_type
+        query_type = type(query)
+        if '.' not in field and query_type != dict and query_type != dtype:
+            # simple query type mismatch
+            logging.warning('%s field "%s" has type %s, spec %s can not match', cls, f, dtype, spec)
+        elif '.' in field and dtype not in (dict, list):
+            # top-level field not a dict or list
+            logging.warning('%s field "%s" is not of type %s, spec %s can not match', cls, f, (dict, list), spec)
 
 
 class RecordingDict(dict):
