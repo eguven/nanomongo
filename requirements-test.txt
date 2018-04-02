@@ -1,3 +1,6 @@
-nose
-mock
+-r requirements.txt
+
 coverage
+flake8
+mock
+nose

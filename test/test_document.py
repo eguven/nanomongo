@@ -279,7 +279,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.foo = six.u('new foo')
         d['bar'] = 1337
         d.moo = ['moo 0']
-        d.save(atomic=True)
+        d.save()
         self.assertEqual(d, Doc.find_one(d._id))
         d.moo = []
         del d['bar']

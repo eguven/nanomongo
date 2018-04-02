@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import multiprocessing  # http://bugs.python.org/issue15881#msg170215
 
 import nanomongo
 import six
@@ -15,7 +14,7 @@ setup(
     author=six.u('Eren Güven'),
     author_email='erenguven0@gmail.com',
     url='https://github.com/eguven/nanomongo',
-    install_requires=['pymongo >= 2.5', 'six'],
+    install_requires=['pymongo', 'six'],
     packages=['nanomongo'],
     setup_requires=['nose'],
     test_suite='nose.main',

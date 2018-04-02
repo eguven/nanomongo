@@ -1,2 +1,3 @@
-pymongo>=2.5
+motor
+pymongo
 six

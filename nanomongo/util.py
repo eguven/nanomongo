@@ -14,7 +14,7 @@ try:
     import pymongo
     ok_types += (pymongo.MongoClient, pymongo.MongoReplicaSetClient)
     import motor
-    ok_types += (motor.MotorClient, motor.MotorReplicaSetClient)
+    ok_types += (motor.MotorClient,)
 except ImportError as e:
     if not ok_types:
         raise e
