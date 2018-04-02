@@ -10,13 +10,7 @@ might suit your needs.
 
 nanomongo has full test coverage.
 
-**Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>`_ - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`_
-
-**Version 0.4**: Utility methods `dbref_field_getters <http://nanomongo.readthedocs.org/en/latest/index.html#dbref_field_getters>`_, `BaseDocument.get_dbref <http://nanomongo.readthedocs.org/en/latest/document.html#nanomongo.document.BaseDocument.get_dbref>`_
-and Bugfix `Python23 text type compatibility <https://github.com/eguven/nanomongo/pull/14>`_
-
-**Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
-when defining your Document, refer to Documentation)
+**Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>`_ - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`_ - `Changelog <https://github.com/eguven/nanomongo/blob/master/CHANGELOG.md>`_
 
 .. image:: https://travis-ci.org/eguven/nanomongo.png
         :target: https://travis-ci.org/eguven/nanomongo
@@ -24,19 +18,12 @@ when defining your Document, refer to Documentation)
 Features
 --------
 
-- single format ``Field`` definitions with type checking and a few common
-  options such as ``required``, ``default``, ``auto_update``
-
-- ``pymongo``-identical index definitions
-
+- typed ``Field`` definitions with validators and a few common options such as ``required``, ``default``, ``auto_update``
+- ``IndexModel`` definitions within Document classes that are automatically created 
 - optional ``dot_notation``
-
 - assignment and deletion (delta) tracking for ``'$set'`` and ``'$unset'``
   and atomic updates; you either insert or update
-
 - ``'$addToSet'`` on ``Document``
-
-- *upcoming* ``'$push'`` ``'$pull'`` funtionality
 
 ::
 
@@ -68,7 +55,7 @@ transparently under the hood.
 Contributions and insight are welcome!
 
 :Author: Eren Güven (GitHub_, Twitter_)
-:License: Apache Software License
+:License: `Apache License 2.0 <https://github.com/eguven/nanomongo/blob/master/LICENSE>`_
 
 .. _GitHub: https://github.com/eguven
 .. _Twitter: https://twitter.com/cyberfart
