@@ -3,13 +3,12 @@ matrix:
   include:
     - python: "2.7"
       env: NOSE_IGNORE_FILES=test_py3_sugar.py
-    - python: "3.2"
-    - python: "3.3"
     - python: "3.4"
+    - python: "3.5"
+    - python: "3.6"
 services: mongodb
 install:
-  - pip install -r requirements.txt -r requirements-test.txt
-  - pip install motor pep8
+  - pip install -r requirements-test.txt
 script:
-  - "pep8 --ignore=E501 ./nanomongo"
-  - "nosetests --with-coverage --cover-package=nanomongo"
+  - "flake8"
+  - "NANOMONGO_SKIP_MOTOR=1 nosetests"
