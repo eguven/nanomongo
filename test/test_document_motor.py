@@ -13,7 +13,7 @@ from nanomongo.document import BaseDocument
 try:
     import motor
     MOTOR_CLIENT = motor.MotorClient()
-except:
+except ImportError:
     MOTOR_CLIENT = None
 
 SKIP_MOTOR = bool(os.environ.get('NANOMONGO_SKIP_MOTOR'))

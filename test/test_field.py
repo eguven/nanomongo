@@ -2,9 +2,8 @@ import copy
 import datetime
 import unittest
 
-import six
-
 from bson import DBRef
+import six
 
 from nanomongo.field import Field
 from nanomongo.errors import ValidationError

@@ -1,6 +1,7 @@
 import unittest
 
 from mock import patch
+import pymongo
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
@@ -10,16 +11,12 @@ from nanomongo.util import (
 )
 from nanomongo.errors import ValidationError
 
-try:
-    import pymongo
-    PYMONGO_CLIENT = pymongo.MongoClient()
-except:
-    PYMONGO_CLIENT = False
+PYMONGO_CLIENT = pymongo.MongoClient()
 
 try:
     import motor
     MOTOR_CLIENT = motor.MotorClient()
-except:
+except ImportError:
     MOTOR_CLIENT = None
 
 

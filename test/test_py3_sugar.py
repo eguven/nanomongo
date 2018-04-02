@@ -7,7 +7,7 @@ try:
     import pymongo
     pymongo.MongoClient()
     PYMONGO_OK = True
-except:
+except ImportError:
     PYMONGO_OK = False
 
 

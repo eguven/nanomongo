@@ -2,13 +2,16 @@ language: python
 matrix:
   include:
     - python: "2.7"
-      env: NOSE_IGNORE_FILES=test_py3_sugar.py
+      env: NOSE_IGNORE_FILES=test_py3_sugar.py FLAKE8_EXCLUDE_ARG=docs,test_py3_sugar.py
     - python: "3.4"
+      env: FLAKE8_EXCLUDE_ARG=docs
     - python: "3.5"
+      env: FLAKE8_EXCLUDE_ARG=docs
     - python: "3.6"
+      env: FLAKE8_EXCLUDE_ARG=docs
 services: mongodb
 install:
   - pip install -r requirements-test.txt
 script:
-  - "flake8"
+  - "flake8 --exclude ${FLAKE8_EXCLUDE_ARG}"
   - "NANOMONGO_SKIP_MOTOR=1 nosetests"

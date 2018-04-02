@@ -183,7 +183,7 @@ class DotNotationMixin(object):
             return super(DotNotationMixin, self).__getattribute__(key)
         try:
             return self.__getitem__(key)
-        except:
+        except KeyError:
             return
 
         return super(DotNotationMixin, self).__getattribute__(key)

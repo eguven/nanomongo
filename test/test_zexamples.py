@@ -1,14 +1,12 @@
 from __future__ import unicode_literals
-import six
 import unittest
+
+import pymongo
+import six
 
 from examples.example import User, Entry
 
-try:
-    import pymongo
-    PYMONGO_CLIENT = pymongo.MongoClient()
-except:
-    PYMONGO_CLIENT = False
+PYMONGO_CLIENT = pymongo.MongoClient()
 
 
 class HelperFuncionsTestCase(unittest.TestCase):
