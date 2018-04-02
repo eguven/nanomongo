@@ -1,16 +1,15 @@
 import os
 import unittest
 
+import bson
 import pymongo
 import six
 import tornado.testing
 
-from bson.objectid import ObjectId
-
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
 
-from . import PYMONGO_CLIENT
+from . import PYMONGO_CLIENT, TEST_DBNAME
 
 try:
     import motor
@@ -25,7 +24,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
     def setUp(self):
         self.io_loop = tornado.ioloop.IOLoop.current()
-        PYMONGO_CLIENT.drop_database('nanotestdb')
+        PYMONGO_CLIENT.drop_database(TEST_DBNAME)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
     @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
@@ -39,7 +38,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
             dot_notation = True
             foo = Field(six.text_type)
             bar = Field(int, required=False)
-        Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
+        Doc.register(client=MOTOR_CLIENT, db=TEST_DBNAME)
 
         col = Doc.get_collection()
         self.assertTrue(isinstance(col, motor.MotorCollection))
@@ -47,7 +46,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         self.assertEqual(None, result)
         d = Doc(foo=six.u('foo value'), bar=42)
         _id = yield motor.Op(d.insert)
-        self.assertTrue(isinstance(_id, ObjectId))
+        self.assertTrue(isinstance(_id, bson.ObjectId))
         result = yield motor.Op(Doc.find({'foo': 'foo value'}).count)
         self.assertEqual(1, result)
         result = yield motor.Op(Doc.find_one, {'bar': 42})
@@ -65,7 +64,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
             bar = Field(int, required=False)
             moo = Field(list)
 
-        Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
+        Doc.register(client=MOTOR_CLIENT, db=TEST_DBNAME)
 
         d = Doc(foo=six.u('foo value'), bar=42)
         d.moo = []
@@ -96,7 +95,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
             foo = Field(six.text_type)
             __indexes__ = [pymongo.IndexModel('foo')]
 
-        Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
+        Doc.register(client=MOTOR_CLIENT, db=TEST_DBNAME)
         # bit of a workaround, checking the current_op on the database because
         # register runs ensure_index async and returns; we end up checking Index
         # before it finishes building on slow systems (travis-ci holla!)
