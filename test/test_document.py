@@ -265,7 +265,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertRaises(ValidationError, d.save)  # _id manually set
         self.assertRaises(ValidationError, d.insert)  # missing field moo
         d.moo = []
-        self.assertEqual(d._id, d.insert())
+        self.assertEqual(d._id, d.insert().inserted_id)
         del d.bar  # unset
         d.save()
         self.assertEqual(d, Doc.find_one(d._id))

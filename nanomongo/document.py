@@ -378,7 +378,7 @@ your document class with client, db, collection.''' % cls
         :meth:`~run_auto_updates()` and :meth:`~validate_all()` """
         self.run_auto_updates()
         self.validate_all()
-        id_or_ids = self.get_collection().insert(self, **kwargs)
+        id_or_ids = self.get_collection().insert_one(self, **kwargs)
         self.reset_diff()
         for field_name, field_value in self.items():
             if isinstance(field_value, dict):  # cast dicts
@@ -412,7 +412,7 @@ your document class with client, db, collection.''' % cls
         if not diff:
             self.reset_diff()
             return
-        response = self.get_collection().update(query, diff, **kwargs)
+        response = self.get_collection().update_one(query, diff, **kwargs)
         self.reset_diff()
         return response
 
