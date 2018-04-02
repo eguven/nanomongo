@@ -88,23 +88,23 @@ class RecordingDict(dict):
     def __setitem__(self, key, value):
         """Override the dict method so we can track changes."""
         try:
-            skip = self[key] == value
+            no_change = self[key] == value  # same value
         except KeyError:
-            skip = False
-        if skip:
+            no_change = False  # never set
+        if no_change:
             return
         value = RecordingDict(value) if isinstance(value, dict) else value
         super(RecordingDict, self).__setitem__(key, value)
         self.__nanodiff__['$set'][key] = value
-        self.clean_other_modifiers('$set', key)
+        self.clear_other_modifiers('$set', key)
 
     def __delitem__(self, key):
         """Override the dict method so we can track changes."""
         super(RecordingDict, self).__delitem__(key)
         self.__nanodiff__['$unset'][key] = 1
-        self.clean_other_modifiers('$unset', key)
+        self.clear_other_modifiers('$unset', key)
 
-    def clean_other_modifiers(self, current_mod, field_name):
+    def clear_other_modifiers(self, current_mod, field_name):
         """
         Given ``current_mod``, removes other ``field_name`` modifiers, eg. when called with ``$set``,
         removes ``$unset`` and ``$addToSet`` etc. on ``field_name``.
