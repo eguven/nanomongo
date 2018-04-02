@@ -3,5 +3,6 @@
 coverage
 flake8
 mock
+motor
 nose
 tornado

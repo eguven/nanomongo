@@ -6,7 +6,7 @@ import six
 
 from examples.example import User, Entry
 
-PYMONGO_CLIENT = pymongo.MongoClient()
+from . import PYMONGO_CLIENT
 
 
 class HelperFuncionsTestCase(unittest.TestCase):

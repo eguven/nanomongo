@@ -10,6 +10,8 @@ from bson.objectid import ObjectId
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
 
+from . import PYMONGO_CLIENT
+
 try:
     import motor
     MOTOR_CLIENT = motor.MotorClient()
@@ -23,7 +25,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
     def setUp(self):
         self.io_loop = tornado.ioloop.IOLoop.current()
-        pymongo.MongoClient().drop_database('nanotestdb')
+        PYMONGO_CLIENT.drop_database('nanotestdb')
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
     @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')

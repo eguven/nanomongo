@@ -1,7 +1,6 @@
 import unittest
 
 from mock import patch
-import pymongo
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
@@ -11,7 +10,7 @@ from nanomongo.util import (
 )
 from nanomongo.errors import ValidationError
 
-PYMONGO_CLIENT = pymongo.MongoClient()
+from . import PYMONGO_CLIENT
 
 try:
     import motor
@@ -27,8 +26,7 @@ class HelperFuncionsTestCase(unittest.TestCase):
 
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
     def test_valid_client_pymongo(self):
-        client = pymongo.MongoClient()
-        self.assertTrue(valid_client(client))
+        self.assertTrue(valid_client(PYMONGO_CLIENT))
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
     def test_valid_client_motor(self):
