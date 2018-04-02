@@ -260,17 +260,18 @@ class MongoDocumentTestCase(unittest.TestCase):
         Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
         d = Doc(foo=six.u('foo value'), bar=42)
-        self.assertRaises(ValidationError, d.save)  # no _id yet
-        d['_id'] = bson.ObjectId()
-        self.assertRaises(ValidationError, d.save)  # _id manually set
+        self.assertRaises(ValidationError, d.save)  # no _id yet, can't save
         self.assertRaises(ValidationError, d.insert)  # missing field moo
+        d._id = bson.ObjectId()
+        self.assertRaises(ValidationError, d.save)  # missing field moo
         d.moo = []
         self.assertEqual(d._id, d.insert().inserted_id)
         del d.bar  # unset
         d.save()
+        self.assertFalse(hasattr(d, 'bar'))  # ensure it's gone
         self.assertEqual(d, Doc.find_one(d._id))
         d.foo = six.u('new foo')
-        d['bar'] = 1337
+        d.bar = 1337
         d.moo = ['moo 0']
         d.save()
         self.assertEqual(d, Doc.find_one(d._id))
@@ -281,10 +282,12 @@ class MongoDocumentTestCase(unittest.TestCase):
         d['extra_field'] = 'fail'
         self.assertRaises(ValidationError, d.save)
         del d['extra_field']
+        self.assertRaises(ValidationError, d.save)
+        d.reset_diff()  # $set/$unset cleanup of undefined field in __nanodiff__
         d.save()
+        self.assertEqual(d, Doc.find_one(d._id))
         d.bar = 'wrong type'
         self.assertRaises(ValidationError, d.save)
-        self.assertRaises(ValidationError, d.insert)
         del d.bar
         d.save()
         del d.foo

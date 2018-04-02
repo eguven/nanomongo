@@ -346,34 +346,39 @@ your document class with client, db, collection.''' % cls
         * field values are of correct data type
         * required fields are present
         """
+        for field_name, field_value in self.items():
+            if not self.nanomongo.has_field(field_name):
+                raise ValidationError('Extra undefined field "{}" with value "{}"'.format(field_name, field_value))
+            field = self.nanomongo.fields[field_name]
+            field.validator(field_value, field_name=field_name)  # run field validator
+
         for field_name, field in self.nanomongo.fields.items():
-            if field_name in self:
-                field.validator(self[field_name], field_name=field_name)
-            elif field.required:
-                raise ValidationError('required field "%s" missing' % field_name)
-        return self.validate()
+            if field.required and field_name not in self:
+                raise ValidationError('Required field "{}" is missing'.format(field_name))
 
     def validate_diff(self):
         """
         Check correctness of diffs (ie. ``$set`` and ``$unset``) before :meth:`~save()`. Ensure that
-        
+
         * no extra (undefined) fields are present for either set or unset
         * field values are of correct data type
         * required fields are not unset
         """
         sets = self.__nanodiff__['$set']
         unsets = self.__nanodiff__['$unset']
+
+        for field_name, field_value in sets.items():
+            if not self.nanomongo.has_field(field_name):
+                raise ValidationError('Extra undefined field "{}" with value "{}"'.format(field_name, field_value))
+            field = self.nanomongo.fields[field_name]
+            field.validator(field_value, field_name=field_name)  # run field validator
+
         for field_name, field_value in unsets.items():
             if self.nanomongo.has_field(field_name):
                 if self.nanomongo.fields[field_name].required:
-                    raise ValidationError('can not unset "%s", required' % field_name)
-        for field_name, field_value in sets.items():
-            if not self.nanomongo.has_field(field_name):
-                err_str = 'extra field "%s" with value "%s"'
-                raise ValidationError(err_str % (field_name, field_value))
-            field = self.nanomongo.fields[field_name]
-            field.validator(field_value, field_name=field_name)
-        return self.validate()
+                    raise ValidationError('Can not unset required field "{}"'.format(field_name))
+            else:
+                raise ValidationError('Can not unset undefined field "{}"'.format(field_name))
 
     def run_auto_updates(self):
         """Runs auto_update functions in ``.nanomongo.transforms``."""
@@ -388,12 +393,13 @@ your document class with client, db, collection.''' % cls
         """
         self.run_auto_updates()
         self.validate_all()
-        id_or_ids = self.get_collection().insert_one(self, **kwargs)
+        self.validate()
+        insert_one_result = self.get_collection().insert_one(self, **kwargs)
         self.reset_diff()
         for field_name, field_value in self.items():
             if isinstance(field_value, dict):  # cast dicts
                 field_value = RecordingDict(field_value)
-        return id_or_ids
+        return insert_one_result
 
     def save(self, **kwargs):
         """
@@ -406,25 +412,24 @@ your document class with client, db, collection.''' % cls
             raise ValidationError('_id seems to be manually set, do insert')
         self.run_auto_updates()
         self.validate_diff()
+        self.validate()
         assert 3 == len(self.__nanodiff__), '__nanodiff__: %s' % self.__nanodiff__
         query = {'_id': self['_id']}
         diff = self.__nanodiff__
         # get subdiff containing dotted keys, merge into diff
         subdiff = self.get_sub_diff()
-        diff['$set'].update(subdiff['$set'])
-        diff['$unset'].update(subdiff['$unset'])
-        diff['$addToSet'].update(subdiff['$addToSet'])
+        for operator, value in subdiff.items():
+            diff[operator].update(value)
         # remove empty update ops, MongoDB 2.6 returns error for them
-        diff = dict(filter(lambda update: update[1], diff.items()))
-        # for operation in ('$set', '$unset', '$addToSet'):
-        #     if {} == diff[operation]:
-        #         del diff[operation]
+        for operator in list(diff.keys()):
+            if not diff[operator]:
+                diff.pop(operator)
         if not diff:
             self.reset_diff()
             return
-        response = self.get_collection().update_one(query, diff, **kwargs)
+        update_result = self.get_collection().update_one(query, diff, **kwargs)
         self.reset_diff()
-        return response
+        return update_result
 
     def addToSet(self, field, value):
         """
