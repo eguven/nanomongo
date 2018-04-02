@@ -6,21 +6,11 @@
 Welcome to nanomongo's documentation!
 =====================================
 
-**nanomongo** is a minimal MongoDB Object-Document Mapper for Python.
-It does not attempt to be a feature-complete ODM but if you like
-using ``pymongo`` api with python dictionaries and often find yourself
-writing validators and ``pymongo.Collection`` wrappers, nanomongo
-might suit your needs.
+**nanomongo** is a minimal MongoDB Object-Document Mapper for Python. It does not attempt to be a feature-complete
+ODM but if you enjoy using `PyMongo <https://api.mongodb.com/python/current>`_ API with dictionaries and often find yourself writing validators and
+``pymongo.Collection`` wrappers, nanomongo might suit your needs.
 
-nanomongo has full test coverage.
-
-**Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>`_ - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`_
-
-**Version 0.4**: Utility methods `dbref_field_getters`_, :meth:`~.document.BaseDocument.get_dbref`
-and Bugfix `Python23 text type compatibility <https://github.com/eguven/nanomongo/pull/14>`_
-
-**Version 0.3**: nanomongo is now python2 compatible (with syntactic difference
-when defining your Document, see `Defining Your Document`_ below).
+**Quick Links**: `Source (github) <https://github.com/eguven/nanomongo>`_ - `Documentation (rtd) <https://nanomongo.readthedocs.org/>`_ - `Packages (PyPi) <https://pypi.python.org/pypi/nanomongo/>`_ - `Changelog <https://github.com/eguven/nanomongo/blob/master/CHANGELOG.md>`_
 
 Installation
 ------------
@@ -29,84 +19,74 @@ Installation
 
     $ pip install nanomongo
 
-Quick Tutorial
+Quickstart
 --------------
 
-Defining Your Document
-^^^^^^^^^^^^^^^^^^^^^^
+Defining A Document And Registering
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-::
+You can define a document as shown below::
 
     import pymongo
-    from nanomongo import Index, Field, BaseDocument
+    from nanomongo import Field, BaseDocument
 
-    mclient = pymongo.MongoClient()
 
-    class Py23CompatibleDoc(BaseDocument):
-        client = mclient
-        db = 'dbname'
-        dot_notation = True
-        foo = Field(str)
-        bar = Field(int, required=False)
-
-    # Python3 only
-    class Py3Doc(BaseDocument, dot_notation=True, client=mclient, db='dbname'):
+    class Py23Doc(BaseDocument):
+        dot_notation = True  # to allow attribute-like access to document keys
         foo = Field(str)
         bar = Field(int, required=False)
 
         __indexes__ = [
-            Index('foo'),
-            Index([('bar', 1), ('foo', -1)], unique=True),
+            pymongo.IndexModel('foo'),
+            pymongo.IndexModel([('bar', 1), ('foo', -1)], unique=True),
         ]
 
-You don't have to declare ``client`` or ``db`` as shown above, you can
-:meth:`~.document.BaseDocument.register` (and I definitely prefer it on
-python2) your document later as such:
+    # before use, the document needs to be registered. The following will connect
+    # to the database and create indexes if necessary
+    Py23Doc.register(client=pymongo.MongoClient(), db='mydbname', collection='Py23Doc')
 
+Python3 allows slightly cleaner definitions::
+
+    # Python3 only
+    class MyDoc(BaseDocument, dot_notation=True):
+        foo = Field(str)
+        bar = Field(int, required=False)
+
+If you omit ``collection`` when defining/registering your document, ``__name__.lower()`` will
+be used by default.
+
+Creating, Inserting, Querying, Saving
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
-    client = pymongo.MongoClient()
-    MyDoc.register(client=client, db='dbname', collection='mydoc')
+    doc = MyDoc(foo='1337', bar=42)  # creates document {'foo': '1337', 'bar': 42}
+    doc.insert()                     # returns pymongo.results.InsertOneResult
+    MyDoc.find_one({'foo': '1337'})  # returns document {'_id': ObjectId('...'), 'bar': 42, 'foo': '1337'}
 
-If you omit ``collection`` when defining/registering your document,
-``__name__.lower()`` will be used by default
+    doc.foo = '42'                   # records the change
+    del doc.bar                      # records the change
+    # save only does partial updates, this will call
+    # collection.update_one({'_id': doc['_id']}, {'$set': {'foo': '42'}, '$unset': {'bar': 1}})
+    doc.save()                       # returns pymongo.results.UpdateResult
 
-Creating, Inserting, Saving
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-::
-
-    doc = MyDoc(foo='42')  # or MyDoc({'foo': '42'})
-    doc.bar = 42  # attribute style access because dot_notation=True
-    doc.insert()
+    MyDoc.find_one({'foo': '1337'})  # returns None
+    MyDoc.find_one({'foo': '42'})    # returns document {'_id': ObjectId('...'), 'foo': '42'}
 
 :meth:`~.document.BaseDocument.insert()` is a wrapper around
-``pymongo.Collection().insert()`` and has the same return value (``_id``)
-unless you explicitly set ``w=0`` ::
-
-    doc.foo = 'new foo'  # this change is recorded
-    del doc.bar  # this is recored as well
-    doc.save()  # save only does partial updates
-
-:meth:`~.document.BaseDocument.save()` uses ``pymongo.Collection().update()``
-with the changed data. The above will run ::
-
-    update({'_id': doc['_id']}, {'$set': {'foo': 'new foo'}, '$unset': {'bar': 1}})
-
-Querying
-^^^^^^^^
-::
-
-    Doc.find({'bar': 42})
-    Doc.find_one({'foo': 'new foo'})
+``pymongo.Collection.insert_one()`` and :meth:`~.document.BaseDocument.save()` is
+a wrapper around ``pymongo.Collection.update_one()``. They pass along received
+keyword arguments and have the same return value.
 
 :meth:`~.document.BaseDocument.find()` and :meth:`~.document.BaseDocument.find_one()`
-methods are essentially wrappers around respective methods of ``pymongo.Collection()``
-and they take the same arguments.
+methods are wrappers around respective methods of ``pymongo.Collection`` with same
+arguments and return values.
 
 Extensive Example
 -----------------
 
-See :doc:`example`
+.. toctree::
+    example
+
 
 Advanced Features
 -----------------
@@ -122,14 +102,17 @@ on your document instance and record the change to be applied later when
 
 ::
 
-    # lets expand our MyDoc
-    class NewDoc(MyDoc):
+    import pymongo
+    from nanomongo import Field, BaseDocument
+
+    class NewDoc(BaseDocument, dot_notation=True):
         list_field = Field(list)
         dict_field = Field(dict)
 
-    NewDoc.register(client=client, db='dbname')
-    doc_id = NewDoc(list_field=[42], dict_field={'foo':[]}).insert()
+    NewDoc.register(client=pymongo.MongoClient(), db='mydbname')
+    doc_id = NewDoc(list_field=[42], dict_field={'foo':[]}).insert().inserted_id
     doc = NewDoc.find_one({'_id': doc_id})
+    # {'_id': ObjectId('...'), 'dict_field': {'foo': []}, 'list_field': [42]}
 
     doc.addToSet('list_field', 1337)
     doc.addToSet('dict_field.foo', 'like a boss')
@@ -141,12 +124,17 @@ Both of the above ``addToSet`` are applied to the ``NewDoc`` instance like Mongo
   - add new value to list field if it's missing (append)
   - complain if it is not a list field
 
-When save is called, query becomes: ::
+When save is called, the following is called::
 
-    update({'$addToSet': {'list_field': {'$each': [1337]}},
-                          'dict_field.foo': {'$each': ['like a boss']}})
+    update_one(
+        {'_id': doc['_id']},
+        {'$addToSet': {'list_field': {'$each': [1337]}}, 'dict_field.foo': {'$each': ['like a boss']}}
+    )
 
-Undefined fields or field type mismatch raises :class:`~.errors.ValidationError`.
+Undefined fields or field type mismatch raises :class:`~.errors.ValidationError`::
+
+    doc.addToSet('dict_field.foo', 'like a boss')
+    ValidationError: Cannot apply $addToSet modifier to non-array: dict_field=<class 'dict'>
 
 QuerySpec check
 ^^^^^^^^^^^^^^^
@@ -162,13 +150,13 @@ an experimental feature at the moment and only does type checks as such:
 
 or ``{'foo.bar': 1}`` will log warnings if
 
-- ``foo`` field is not of type ``dict`` or ``list`` (dotted field type)
+- ``foo`` field is not of type ``dict`` or ``list``
 
 dbref_field_getters
--------------------
+^^^^^^^^^^^^^^^^^^^
 
 Documents that define ``bson.DBRef`` fields automatically generate getter methods
-through :func:`nanomongo.document.ref_getter_maker` where the generated methods
+through :func:`~.document.ref_getter_maker` where the generated methods
 have names such as ``get_<field_name>_field``.
 ::
 
@@ -182,12 +170,15 @@ have names such as ``get_<field_name>_field``.
         user = Field(DBRef)
 
 nanomongo tries to guess the ``document_class`` if it's not provided by looking at
-registered subclasses of :class:`~.document.BaseDocument`. If it matches two (for example
-when two document classes use the same collection), it will raise
+registered subclasses of :class:`~.document.BaseDocument`. If it matches more than one
+(for example when two document classes use the same collection), it will raise
 :class:`~.errors.UnsupportedOperation`.
 
 pymongo & motor
 ---------------
+
+**0.5.0 update**: motor support is currently not in a working state, this section is
+kept for reference.
 
 Throughout the documentation, ``pymongo`` is referenced but all features work the
 same when using `motor <https://github.com/mongodb/motor>`_ transparently if you
@@ -221,10 +212,10 @@ Contents
 .. toctree::
    :titlesonly:
 
-   field
    document
-   util
    errors
+   field
+   util
 
 
 Indices and tables
