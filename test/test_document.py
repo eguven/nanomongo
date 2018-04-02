@@ -294,8 +294,8 @@ class MongoDocumentTestCase(unittest.TestCase):
         self.assertRaises(ValidationError, d.save)
 
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
-    def test_partial_update_addToSet(self):
-        """Pymongo: addToSet functionality with `save`"""
+    def test_partial_update_add_to_set(self):
+        """Pymongo: $addToSet functionality with `save`"""
 
         class Doc(BaseDocument):
             dot_notation = True
@@ -304,28 +304,28 @@ class MongoDocumentTestCase(unittest.TestCase):
             moo = Field(six.text_type)
         Doc.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
 
-        self.assertRaises(ValidationError, Doc().addToSet, *('$fail', 42))
-        self.assertRaises(ValidationError, Doc().addToSet, *('bar.$1', 42))
+        self.assertRaises(ValidationError, Doc().add_to_set, *('$fail', 42))
+        self.assertRaises(ValidationError, Doc().add_to_set, *('bar.$1', 42))
         # use dict.__setitem__ to bypass RecordingDict cast at self.__setitem__
         d = Doc()
         dict.__setitem__(d, 'bar', {})
         self.assertEqual(dict, type(d.bar))  # not RecordingDict
-        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('bar.1', 42))
         d = Doc(foo=['foo_1', 'foo_2'], bar={'1': 'bar_1', '2': []}, moo=six.u('moo val'))
         d.insert()
-        self.assertRaises(ValidationError, d.addToSet, *('moo', 42))
-        self.assertRaises(ValidationError, d.addToSet, *('moo.not_dict', 42))
-        self.assertRaises(ValidationError, d.addToSet, *('undefined.field', 42))
-        self.assertRaises(UnsupportedOperation, d.addToSet, *('bar.a.b', 42))
-        d.addToSet('foo', 'foo_1')
+        self.assertRaises(ValidationError, d.add_to_set, *('moo', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('moo.not_dict', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('undefined.field', 42))
+        self.assertRaises(UnsupportedOperation, d.add_to_set, *('bar.a.b', 42))
+        d.add_to_set('foo', 'foo_1')
         d.moo = six.u('new moo')
-        d.addToSet('foo', 'foo_3')
-        d.addToSet('foo', 'foo_1')
-        d.addToSet('bar.2', 'L33t')
-        d.addToSet('bar.3', 'new_1')
-        d.addToSet('bar.3', 'new_1')
-        d.addToSet('bar.3', 'new_2')
-        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 1))
+        d.add_to_set('foo', 'foo_3')
+        d.add_to_set('foo', 'foo_1')
+        d.add_to_set('bar.2', 'L33t')
+        d.add_to_set('bar.3', 'new_1')
+        d.add_to_set('bar.3', 'new_1')
+        d.add_to_set('bar.3', 'new_2')
+        self.assertRaises(ValidationError, d.add_to_set, *('bar.1', 1))
         topdiff = {'$set': {'moo': 'new moo'}, '$unset': {},
                    '$addToSet': {'foo': {'$each': ['foo_1', 'foo_3']}}}
         subdiff = {'$set': {}, '$unset': {},
@@ -337,20 +337,20 @@ class MongoDocumentTestCase(unittest.TestCase):
         d.save()
         d_db = Doc.find_one()
         self.assertTrue(d_copy == d == d_db)
-        # check against field duplication at addToSet
+        # check against field duplication at $addToSet
         d = Doc()
         d.foo = [42]  # set -- top-level $addToSet will clash
         self.assertEqual([42], d.__nanodiff__['$set']['foo'])
-        self.assertRaises(ValidationError, d.addToSet, *('foo', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('foo', 42))
         del d.foo  # unset -- top-level $addToSet will clash
-        self.assertRaises(ValidationError, d.addToSet, *('foo', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('foo', 42))
         d = Doc(bar={})
         d.bar['1'] = [42]  # deep-level set -- dotted $addToSet will clash
-        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('bar.1', 42))
         d = Doc()
         d.bar = {'1': [42]}  # dict set on top-level -- dotted $addToSet will clash
         self.assertEqual({'bar': {'1': [42]}}, d.__nanodiff__['$set'])
-        self.assertRaises(ValidationError, d.addToSet, *('bar.1', 42))
+        self.assertRaises(ValidationError, d.add_to_set, *('bar.1', 42))
 
         class Doc2(BaseDocument):
             dot_notation = True
@@ -359,8 +359,8 @@ class MongoDocumentTestCase(unittest.TestCase):
         Doc2.register(client=PYMONGO_CLIENT, db=TEST_DBNAME)
         dd = Doc2()
         dd.insert()
-        # addToSet on unset field
-        dd.addToSet('optional.sub', 42)
+        # $addToSet on unset field
+        dd.add_to_set('optional.sub', 42)
         self.assertEqual([42], dd.optional['sub'])
         self.assertEqual({'sub': {'$each': [42]}}, dd.optional.__nanodiff__['$addToSet'])
         dd.save()

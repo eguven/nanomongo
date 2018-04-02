@@ -151,7 +151,7 @@ class RecordingDict(dict):
     def check_can_update(self, modifier, field_name):
         """Check if given `modifier` `field_name` combination can be
         added. MongoDB does not allow field duplication with update
-        modifiers. This is to be used with methods :meth:`~.document.BaseDocument.addToSet()` ...
+        modifiers. This is to be used with methods :meth:`~.document.BaseDocument.add_to_set()` ...
         """
         for mod, updates in self.__nanodiff__.items():
             if mod == modifier:

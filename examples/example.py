@@ -45,7 +45,7 @@ class User(BaseDocument):
         assert categories, 'categories expected'
         for category in categories:
             assert (category and isinstance(category, six.text_type)), 'category not str or emtpy'
-            self.addToSet('following', category)
+            self.add_to_set('following', category)
         self.save()
 
     def get_entries(self, **kwargs):
@@ -100,7 +100,7 @@ class Entry(BaseDocument):
         assert (author and isinstance(author, User)), 'second argument not an instance of User'
         doc = {'text': text, 'author': author.name, 'created': datetime.utcnow()}
         # TODO: push is more appropriate in this situation, add when implemented
-        self.addToSet('comments', doc)
+        self.add_to_set('comments', doc)
         # we could have also done self.comments = self.comments + [doc]
         self.save()
         return text

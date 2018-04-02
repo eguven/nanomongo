@@ -431,7 +431,7 @@ your document class with client, db, collection.''' % cls
         self.reset_diff()
         return update_result
 
-    def addToSet(self, field, value):
+    def add_to_set(self, field, value):
         """
         Explicitly defined ``$addToSet`` functionality. This sets/updates the field value accordingly
         and records the change to be saved with :meth:`~save()`.
@@ -440,15 +440,14 @@ your document class with client, db, collection.''' % cls
             # MongoDB style dot notation can be used to add to lists
             # in embedded documents
             doc = Doc(foo=[], bar={})
-            doc.addToSet('foo', new_value)
+            doc.add_to_set('foo', new_value)
 
         Contrary to how ``$set`` ing the same value has no effect under __setitem__ (see
-        ``.util.RecordingDict.__setitem__()``), when the new value is equal to the current;
-        ``addToSet()`` explicitly records the change so it will be sent to the
-        database when :meth:`~save()` is called.
+        ``.util.RecordingDict.__setitem__()``) when the new value is equal to the current, this
+        explicitly records the change so it will be sent to the database when :meth:`~save()` is called.
         """
-        # TODO: rename to add_to_set
-        # TODO: doc.addToSet('bar.sub_field', new_value) doesn't actually work
+
+        # TODO: doc.add_to_set('bar.sub_field', new_value) doesn't actually work
         def top_level_add(self, field, value):
             """add the value to field. appending if the list exists and
             does not contain the value; create new list otherwise.

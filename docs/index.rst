@@ -96,7 +96,7 @@ $addToSet
 
 MongoDB ``$addToSet`` update modifier is very useful. nanomongo implements it.
 
-:meth:`~.document.BaseDocument.addToSet()` will do the `add-to-field-if-doesnt-exist`
+:meth:`~.document.BaseDocument.add_to_set()` will do the `add-to-field-if-doesnt-exist`
 on your document instance and record the change to be applied later when
 :meth:`~.document.BaseDocument.save()` is called.
 
@@ -114,11 +114,11 @@ on your document instance and record the change to be applied later when
     doc = NewDoc.find_one({'_id': doc_id})
     # {'_id': ObjectId('...'), 'dict_field': {'foo': []}, 'list_field': [42]}
 
-    doc.addToSet('list_field', 1337)
-    doc.addToSet('dict_field.foo', 'like a boss')
+    doc.add_to_set('list_field', 1337)
+    doc.add_to_set('dict_field.foo', 'like a boss')
     doc.save()
 
-Both of the above ``addToSet`` are applied to the ``NewDoc`` instance like MongoDB does it eg.
+Both of the above ``add_to_set`` calls are applied to the ``NewDoc`` instance like MongoDB does it eg.
 
   - create list field with new value if it doesn't exist
   - add new value to list field if it's missing (append)
@@ -133,7 +133,7 @@ When save is called, the following is called::
 
 Undefined fields or field type mismatch raises :class:`~.errors.ValidationError`::
 
-    doc.addToSet('dict_field.foo', 'like a boss')
+    doc.add_to_set('dict_field.foo', 'like a boss')
     ValidationError: Cannot apply $addToSet modifier to non-array: dict_field=<class 'dict'>
 
 QuerySpec check
@@ -189,7 +189,7 @@ register the document class with a ``motor.MotorClient``.
     # and now some async motor queries (using @gen.engine)
     doc_id = yield motor.Op(MyDoc(foo=42).insert)
     doc = yield motor.Op(MyDoc.find_one, {'foo': 42})
-    doc.addToSet('bar', 1337)
+    doc.add_to_set('bar', 1337)
     yield motor.Op(doc.save)
 
 **Note** however that pymongo vs motor behaviour is not necessarily identical.
