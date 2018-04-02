@@ -40,9 +40,9 @@ Features
 
 ::
 
-    # rough example
+    # simple example
     import pymongo
-    from nanomongo import Field, BaseDocument, Index
+    from nanomongo import Field, BaseDocument
 
     client = pymongo.MongoClient()
 
@@ -51,8 +51,8 @@ Features
         bar = Field(int, required=False)
 
         __indexes__ = [
-            Index('foo'),
-            Index([('bar', 1), ('foo', -1)], unique=True),
+            pymongo.IndexModel('foo'),
+            pymongo.IndexModel([('bar', 1), ('foo', -1)], unique=True),
         ]
 
     doc = MyDoc(foo='L33t')

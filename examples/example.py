@@ -4,7 +4,7 @@ import bson
 import pymongo
 import six
 
-from nanomongo import Index, Field, BaseDocument
+from nanomongo import Field, BaseDocument
 
 
 class User(BaseDocument):
@@ -21,9 +21,11 @@ class User(BaseDocument):
     preferences = Field(dict, default={'notifications': True})
 
     __indexes__ = [
-        Index('name'),
-        Index([('following', pymongo.ASCENDING),
-               ('preferences.notifications', pymongo.ASCENDING)])
+        pymongo.IndexModel('name'),
+        pymongo.IndexModel([
+            ('following', pymongo.ASCENDING),
+            ('preferences.notifications', pymongo.ASCENDING)
+        ]),
     ]
 
     def add_entry(self, title, categories=None):
@@ -87,9 +89,9 @@ class Entry(BaseDocument):
     comments = Field(list, default=[])
 
     __indexes__ = [
-        Index([('user', pymongo.ASCENDING), ('_id', pymongo.DESCENDING)]),
-        Index('categories'),
-        Index([('comments.author', pymongo.ASCENDING), ('comments.created', pymongo.DESCENDING)]),
+        pymongo.IndexModel([('user', pymongo.ASCENDING), ('_id', pymongo.DESCENDING)]),
+        pymongo.IndexModel('categories'),
+        pymongo.IndexModel([('comments.author', pymongo.ASCENDING), ('comments.created', pymongo.DESCENDING)]),
     ]
 
     def add_comment(self, text, author):
@@ -107,7 +109,3 @@ class Entry(BaseDocument):
         """Return a cursor for Users who follow the categories that this Entry has
         """
         return User.find({'following': {'$in': self.categories}})
-
-client = pymongo.MongoClient()
-User.register(client=client, db='nanotestdb')
-Entry.register(client=client, db='nanotestdb')

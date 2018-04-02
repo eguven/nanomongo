@@ -7,7 +7,7 @@ import sys
 import six
 
 from nanomongo.field import Field
-from nanomongo.document import BaseDocument, Index
+from nanomongo.document import BaseDocument
 from nanomongo.errors import *
 
 try:
@@ -505,63 +505,6 @@ class IndexTestCase(unittest.TestCase):
         if PYMONGO_OK:
             pymongo.MongoClient().drop_database('nanotestdb')
 
-    def test_index_definitions_bad(self):
-
-        self.assertRaises(TypeError, Index)
-
-        class FooDoc(BaseDocument):
-            dot_notation = True
-            foo = Field(six.text_type)
-
-        def bad_def_type_1():  # no fields -> no nanomongo -> no __indexes__ allowed
-            class Doc(BaseDocument):
-                __indexes__ = ''
-
-        def bad_def_type_2():  # bad __indexes__ content
-            class Doc(FooDoc):
-                __indexes__ = ['foo']
-
-        def bad_def_type_3():  # bad __indexes__ content
-            class Doc(FooDoc):
-                __indexes__ = [Index(1)]
-
-        def bad_def_type_4():
-            class Doc(FooDoc):  # bad __indexes__ content
-                __indexes__ = [Index([(1,)])]
-
-        def def_mismatch_1():  # index field not defined
-            class Doc(FooDoc):
-                __indexes__ = [Index('bar')]
-
-        def def_mismatch_2():  # list form mismatch, first position
-            class Doc(FooDoc):
-                __indexes__ = [Index([('bar', 1)])]
-
-        def def_mismatch_3():  # list form mismatch, second position
-            class Doc(FooDoc):
-                __indexes__ = [
-                    Index([('foo', pymongo.ASCENDING), ('bar', pymongo.DESCENDING)]),
-                ]
-
-        def def_mismatch_4():
-            class Doc(BaseDocument):
-                foo = Field(six.text_type)
-                bar = Field(int)
-                __indexes__ = [
-                    Index('foo.fail'),
-                    Index([('foo.fail', pymongo.ASCENDING), ('bar.fail', pymongo.ASCENDING)]),
-                ]
-
-        counts = {'type': 0, 'mismatch': 0}
-        for fname, func in locals().items():  # run the above defined functions
-            if 'type' in fname:
-                counts['type'] += 1
-                self.assertRaises(TypeError, func)
-            elif 'mismatch' in fname:
-                counts['mismatch'] += 1
-                self.assertRaises(IndexMismatchError, func)
-        self.assertTrue(4 == counts['type'] == counts['mismatch'])
-
     @unittest.skipUnless(PYMONGO_OK, 'pymongo not installed or connection refused')
     def test_index_definitions(self):
         client = pymongo.MongoClient()
@@ -571,44 +514,26 @@ class IndexTestCase(unittest.TestCase):
             foo = Field(six.text_type)
             bar = Field(int)
             __indexes__ = [
-                Index('foo'),
-                Index([('bar', pymongo.ASCENDING), ('foo', pymongo.DESCENDING)],
+                pymongo.IndexModel('foo', background=True),
+                pymongo.IndexModel([('bar', pymongo.ASCENDING), ('foo', pymongo.DESCENDING)],
                       unique=True),
             ]
         Doc.register(client=client, db='nanotestdb')
-
         self.assertEqual(3, len(Doc.get_collection().index_information()))  # 2 + _id
 
+        # compare defines indexes vs indexes retured from the database
+        defined_indexes = [index.document['key'] for index in Doc.__indexes__]
+        db_indexes = [index['key'] for index in Doc.get_collection().list_indexes()]
+        # MongoDB automatically adds (_id, pymondo.ASCENDING)
+        _id_index = bson.SON([('_id', 1)])
+        self.assertEqual(_id_index, db_indexes[0])
+        db_indexes = db_indexes[1:]
+        self.assertEqual(defined_indexes, db_indexes)
+
+
         class Doc2(Doc):
-            moo = Field(float)
             __indexes__ = [
-                Index('bar'),  # pointless, but index test on superclass field
-                Index([('moo', pymongo.DESCENDING), ('foo', pymongo.ASCENDING)]),
+                pymongo.IndexModel('bar'),  # index test on superclass field
             ]
         Doc2.register(client=client, db='nanotestdb')
-
-        self.assertEqual(3, len(Doc2.get_collection().index_information()))  # 2 + _id
-
-        class Doc3(BaseDocument):
-            foo = Field(six.text_type)
-            __indexes__ = [Index('foo')]
-
-        self.assertTrue(hasattr(Doc3, '__indexes__'))
-        Doc3.register(client=client, db='nanotestdb')
-        self.assertEqual(2, len(Doc3.get_collection().index_information()))  # 1 + _id
-        self.assertFalse(hasattr(Doc3, '__indexes__'))
-
-        class Doc4(BaseDocument):
-            # test indexes on dotted keys
-            foo = Field(list)
-            bar = Field(dict)
-            __indexes__ = [
-                Index('bar.moo'),
-                # compund on two embedded document fields
-                Index([('bar.moo', pymongo.ASCENDING), ('bar.zoo', pymongo.ASCENDING)]),
-                # compound on embedded document field + list element document field
-                Index([('bar.moo', pymongo.ASCENDING), ('foo.whatever', pymongo.ASCENDING)]),
-            ]
-
-        Doc4.register(client=client, db='nanotestdb')
-        self.assertEqual(4, len(Doc4.get_collection().index_information()))  # 4 + _id
+        self.assertEqual(2, len(Doc2.get_collection().index_information()))  # 1 + _id

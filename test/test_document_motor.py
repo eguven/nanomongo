@@ -8,7 +8,7 @@ import tornado.testing
 from bson.objectid import ObjectId
 
 from nanomongo.field import Field
-from nanomongo.document import Index, BaseDocument
+from nanomongo.document import BaseDocument
 
 try:
     import motor
@@ -87,7 +87,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
         class Doc(BaseDocument):
             foo = Field(six.text_type)
-            __indexes__ = [Index('foo')]
+            __indexes__ = [pymongo.IndexModel('foo')]
 
         Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
         # bit of a workaround, checking the current_op on the database because
