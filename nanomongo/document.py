@@ -1,12 +1,11 @@
 import importlib
 import weakref
 
-import pymongo
 import six
 
 from bson import ObjectId, DBRef
 
-from .errors import *
+from .errors import ConfigurationError, DBRefNotSetError, ExtraFieldError, UnsupportedOperation, ValidationError
 from .field import Field
 from .util import (
     RecordingDict, DotNotationMixin, valid_client, NanomongoSONManipulator,
@@ -467,7 +466,7 @@ your document class with client, db, collection.''' % cls
                 err_str = err_str % (field, self.nanomongo.fields[field].data_type)
                 raise ValidationError(err_str)
             else:
-                raise ValidationError('Undefined field: "%s"' % top_key)
+                raise ValidationError('Undefined field: "%s"' % field)
         # if deep-level
         else:
             try:

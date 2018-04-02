@@ -1,7 +1,6 @@
 # Change Log
 
-## [Unreleased](https://github.com/eguven/nanomongo/tree/HEAD)
-
+## [0.4.1](https://github.com/eguven/nanomongo/tree/0.4.1) (2015-03-01)
 **Implemented enhancements:**
 
 - add document class hint for DBRef fields [\#11](https://github.com/eguven/nanomongo/issues/11)

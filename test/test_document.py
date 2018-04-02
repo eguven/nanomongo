@@ -8,14 +8,16 @@ import six
 
 from nanomongo.field import Field
 from nanomongo.document import BaseDocument
-from nanomongo.errors import *
+from nanomongo.errors import (
+    ConfigurationError, DBRefNotSetError, ExtraFieldError, UnsupportedOperation, ValidationError,
+)
 
 try:
     import pymongo
     import bson
     pymongo.MongoClient()
     PYMONGO_OK = True
-except:
+except ImportError:
     PYMONGO_OK = False
 
 
@@ -130,12 +132,11 @@ class DocumentTestCase(unittest.TestCase):
         class Doc2(Doc):
             bar = Field(six.text_type, required=False)
 
-        dir_base = BaseDocument()
-        dir_doc = Doc()
-        dir_doc2 = Doc2()
-        base_dir = dir(dir_base)
-        doc_dir = sorted(dir(dir_base) + Doc.nanomongo.list_fields())
-        doc2_dir = sorted(doc_dir + ['bar'])
+        base_doc_attr = dir(BaseDocument())
+        doc_attr = dir(Doc())
+        doc2_attr = dir(Doc2())
+        self.assertEqual(sorted(base_doc_attr + ['foo']), doc_attr)
+        self.assertEqual(sorted(doc_attr + ['bar']), doc2_attr)
 
 
 class ClientTestCase(unittest.TestCase):
@@ -500,6 +501,7 @@ class MongoDocumentTestCase(unittest.TestCase):
         # cleanup
         del sys.modules[__name__].Doc
 
+
 class IndexTestCase(unittest.TestCase):
     def setUp(self):
         if PYMONGO_OK:
@@ -515,8 +517,9 @@ class IndexTestCase(unittest.TestCase):
             bar = Field(int)
             __indexes__ = [
                 pymongo.IndexModel('foo', background=True),
-                pymongo.IndexModel([('bar', pymongo.ASCENDING), ('foo', pymongo.DESCENDING)],
-                      unique=True),
+                pymongo.IndexModel(
+                    [('bar', pymongo.ASCENDING), ('foo', pymongo.DESCENDING)],
+                    unique=True),
             ]
         Doc.register(client=client, db='nanotestdb')
         self.assertEqual(3, len(Doc.get_collection().index_information()))  # 2 + _id
@@ -529,7 +532,6 @@ class IndexTestCase(unittest.TestCase):
         self.assertEqual(_id_index, db_indexes[0])
         db_indexes = db_indexes[1:]
         self.assertEqual(defined_indexes, db_indexes)
-
 
         class Doc2(Doc):
             __indexes__ = [

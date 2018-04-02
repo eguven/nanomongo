@@ -5,7 +5,6 @@ from nanomongo.errors import ConfigurationError
 
 try:
     import pymongo
-    import bson
     pymongo.MongoClient()
     PYMONGO_OK = True
 except:

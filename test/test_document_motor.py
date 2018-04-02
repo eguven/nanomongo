@@ -1,6 +1,5 @@
 import os
 import unittest
-import time
 
 import pymongo
 import six
