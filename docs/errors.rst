@@ -3,10 +3,10 @@
 
 .. automodule:: nanomongo.errors
 
-   .. autoclass:: NanomongoError
-   .. autoclass:: ValidationError
-   .. autoclass:: ExtraFieldError
-   .. autoclass:: ConfigurationError
-   .. autoclass:: IndexMismatchError
-   .. autoclass:: UnsupportedOperation
-   .. autoclass:: DBRefNotSetError
+   .. autoexception:: NanomongoError
+   .. autoexception:: ValidationError
+   .. autoexception:: ExtraFieldError
+   .. autoexception:: ConfigurationError
+   .. autoexception:: IndexMismatchError
+   .. autoexception:: UnsupportedOperation
+   .. autoexception:: DBRefNotSetError
