@@ -1,3 +1,3 @@
-from .document import Index, Field, BaseDocument
+from .document import Field, BaseDocument  # NOQA
 
-__version__ = '0.4.1'
+__version__ = '0.5.0-dev'

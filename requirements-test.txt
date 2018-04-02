@@ -1,3 +1,8 @@
-nose
-mock
+-r requirements.txt
+
 coverage
+flake8
+mock
+motor
+nose
+tornado

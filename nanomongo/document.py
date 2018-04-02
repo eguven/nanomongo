@@ -1,12 +1,11 @@
 import importlib
 import weakref
 
-import pymongo
 import six
 
 from bson import ObjectId, DBRef
 
-from .errors import *
+from .errors import ConfigurationError, DBRefNotSetError, ExtraFieldError, UnsupportedOperation, ValidationError
 from .field import Field
 from .util import (
     RecordingDict, DotNotationMixin, valid_client, NanomongoSONManipulator,
@@ -46,17 +45,6 @@ def ref_getter_maker(field_name, document_class=None):
 
 class BasesTuple(tuple):
     pass
-
-
-class Index(object):
-    """A container for clean index definition, it's ``args`` and
-    ``kwargs`` are passed to ``pymongo.Collection.create_index``
-    """
-    def __init__(self, *args, **kwargs):
-        if not args:
-            raise TypeError('Index: key or list of key-direction tuples expected')
-        self.args = args
-        self.kwargs = kwargs
 
 
 class Nanomongo(object):
@@ -153,7 +141,7 @@ class Nanomongo(object):
     def register(self, client=None, db_string=None, collection=None):
         """register the class. this is called from defined documents'
         :meth:`~BaseDocument.register()` method. Note that this also
-        runs :meth:`~pymongo.collection.Collection.ensure_index()`
+        runs :meth:`~pymongo.collection.Collection.create_indexes()`
         """
         self.set_client(client) if client else None
         self.set_db(db_string) if db_string else None
@@ -163,10 +151,8 @@ class Nanomongo(object):
         # indexes
         doc_class = self.classref()
         indexes = doc_class.__indexes__ if hasattr(doc_class, '__indexes__') else []
-        for index in indexes:
-            self.ensure_index(index)
-        if hasattr(doc_class, '__indexes__'):
-            delattr(doc_class, '__indexes__')
+        if indexes:
+            self.get_collection().create_indexes(indexes)
         # mark as registered
         self.registered = True
 
@@ -174,10 +160,6 @@ class Nanomongo(object):
         """Returns collection"""
         self.check_config()
         return self.database[self.collection]
-
-    def ensure_index(self, index):
-        """``Collection.ensure_index`` wrapper"""
-        return self.get_collection().ensure_index(*index.args, **index.kwargs)
 
 
 class DocumentMeta(type):
@@ -243,34 +225,6 @@ class DocumentMeta(type):
             cls.nanomongo.register()
         except ConfigurationError:
             pass
-        # indexes
-        indexes = cls.__indexes__ if hasattr(cls, '__indexes__') else []
-
-        for index in indexes:
-            if not isinstance(index, Index):
-                raise TypeError('__indexes__: list of Index instances expected')
-            cls.check_index(index)
-
-    def check_index(cls, index):
-        """check correctness of :class:`~Index` definitions"""
-        def valid_index_key(ikey):
-            if '.' not in ikey:
-                return cls.nanomongo.has_field(ikey)
-            field = ikey.split('.')[0]
-            return (cls.nanomongo.has_field(field) and
-                    cls.nanomongo.fields[field].data_type in [dict, list])
-        i = index.args[0]  # key or list
-        if not isinstance(i, (six.string_types, list)):
-            raise TypeError('Index: str or list of key-value tuples expected')
-        if isinstance(i, six.string_types) and not valid_index_key(i):
-            raise IndexMismatchError('field for index "%s" does not exist' % i)
-        elif isinstance(i, list):
-            for tup in i:
-                if not isinstance(tup, tuple) or 2 != len(tup):
-                    raise TypeError('Index: list of key-value tuples expected')
-                if not valid_index_key(tup[0]):
-                    err_str = 'field for index "%s" does not exist' % tup[0]
-                    raise IndexMismatchError(err_str)
 
     @classmethod
     def _get_bases(cls, bases):
@@ -346,7 +300,7 @@ class BaseDocument(RecordingDict):
     @classmethod
     def register(cls, client=None, db=None, collection=None):
         """Register this document. Sets client, database, collection
-        information, builds (ensure) indexes and sets SON manipulator
+        information, creates indexes and sets SON manipulator
         """
         if cls.nanomongo.registered:
             err_str = '''%s is already registered. This is automatic if you have defined
@@ -424,7 +378,7 @@ your document class with client, db, collection.''' % cls
         :meth:`~run_auto_updates()` and :meth:`~validate_all()` """
         self.run_auto_updates()
         self.validate_all()
-        id_or_ids = self.get_collection().insert(self, **kwargs)
+        id_or_ids = self.get_collection().insert_one(self, **kwargs)
         self.reset_diff()
         for field_name, field_value in self.items():
             if isinstance(field_value, dict):  # cast dicts
@@ -458,7 +412,7 @@ your document class with client, db, collection.''' % cls
         if not diff:
             self.reset_diff()
             return
-        response = self.get_collection().update(query, diff, **kwargs)
+        response = self.get_collection().update_one(query, diff, **kwargs)
         self.reset_diff()
         return response
 
@@ -512,7 +466,7 @@ your document class with client, db, collection.''' % cls
                 err_str = err_str % (field, self.nanomongo.fields[field].data_type)
                 raise ValidationError(err_str)
             else:
-                raise ValidationError('Undefined field: "%s"' % top_key)
+                raise ValidationError('Undefined field: "%s"' % field)
         # if deep-level
         else:
             try:

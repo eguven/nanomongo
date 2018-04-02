@@ -1,2 +1,2 @@
-pymongo>=2.5
+pymongo
 six

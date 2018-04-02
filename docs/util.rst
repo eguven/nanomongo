@@ -1,14 +1,11 @@
-``nanomongo.util`` --- ``RecordingDict``
+``nanomongo.util``
 ============================================
 
 .. automodule:: nanomongo.util
 
-   RecordingDict
-   ----------------
-   .. autoclass:: RecordingDict
-      :members:
+.. autoclass:: RecordingDict
+  :members:
 
    .. automethod:: RecordingDict.__init__
 
-   .. autoclass:: NanomongoSONManipulator
- 
+.. autoclass:: NanomongoSONManipulator

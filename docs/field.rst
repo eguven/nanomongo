@@ -1,11 +1,10 @@
-``nanomongo.field`` --- ``Field``
+``nanomongo.field``
 ==================================
 
 .. automodule:: nanomongo.field
 
-   Field
-   ----------------
-   .. autoclass:: Field
-      :members:
 
-   .. automethod:: Field.__init__
+.. autoclass:: Field
+  :members:
+
+  .. automethod:: Field.__init__

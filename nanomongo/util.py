@@ -1,23 +1,17 @@
 import __main__
 import logging
-import warnings
 
 import pymongo
 
-from pymongo import son_manipulator
-
 from .errors import ExtraFieldError, ValidationError
 
-ok_types = ()
+ok_types = (pymongo.MongoClient, pymongo.MongoReplicaSetClient)
 
 try:
-    import pymongo
-    ok_types += (pymongo.MongoClient, pymongo.MongoReplicaSetClient)
     import motor
-    ok_types += (motor.MotorClient, motor.MotorReplicaSetClient)
+    ok_types += (motor.MotorClient,)
 except ImportError as e:
-    if not ok_types:
-        raise e
+    pass
 
 logging.basicConfig(format='[%(asctime)s] %(levelname)s [%(module)s.%(funcName)s():%(lineno)d] %(message)s')
 logger = logging.getLogger(__file__)
@@ -58,7 +52,7 @@ def check_keys(dct):
 
 
 def check_spec(cls, spec):
-    """Check the query spec for given class & display warnings.
+    """Check the query spec for given class and log warnings.
     Dotted keys are checked for top-level field existence and its type
     being dict/list. Normal keys are checked for field existence only.
     """
@@ -189,7 +183,7 @@ class DotNotationMixin(object):
             return super(DotNotationMixin, self).__getattribute__(key)
         try:
             return self.__getitem__(key)
-        except:
+        except KeyError:
             return
 
         return super(DotNotationMixin, self).__getattribute__(key)

@@ -1,5 +1,5 @@
+import os
 import unittest
-import time
 
 import pymongo
 import six
@@ -8,22 +8,27 @@ import tornado.testing
 from bson.objectid import ObjectId
 
 from nanomongo.field import Field
-from nanomongo.document import Index, BaseDocument
+from nanomongo.document import BaseDocument
+
+from . import PYMONGO_CLIENT
 
 try:
     import motor
     MOTOR_CLIENT = motor.MotorClient()
-except:
+except ImportError:
     MOTOR_CLIENT = None
+
+SKIP_MOTOR = bool(os.environ.get('NANOMONGO_SKIP_MOTOR'))
 
 
 class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
 
     def setUp(self):
         self.io_loop = tornado.ioloop.IOLoop.current()
-        pymongo.MongoClient().drop_database('nanotestdb')
+        PYMONGO_CLIENT.drop_database('nanotestdb')
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
     @tornado.testing.gen_test
     def test_insert_find_motor(self):
         """Motor: Test document save, find, find_one"""
@@ -49,6 +54,7 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         self.assertEqual(d, result)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
     @tornado.testing.gen_test
     def test_partial_update(self):
         """Motor: partial atomic update with save"""
@@ -81,13 +87,14 @@ class MotorDocumentTestCase(tornado.testing.AsyncTestCase):
         self.assertEqual(d, result)
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
+    @unittest.skipIf(SKIP_MOTOR, 'NANOMONGO_SKIP_MOTOR is set')
     @tornado.testing.gen_test
     def test_index_motor(self):
         """Motor: test index build using motor"""
 
         class Doc(BaseDocument):
             foo = Field(six.text_type)
-            __indexes__ = [Index('foo')]
+            __indexes__ = [pymongo.IndexModel('foo')]
 
         Doc.register(client=MOTOR_CLIENT, db='nanotestdb')
         # bit of a workaround, checking the current_op on the database because

@@ -10,16 +10,12 @@ from nanomongo.util import (
 )
 from nanomongo.errors import ValidationError
 
-try:
-    import pymongo
-    PYMONGO_CLIENT = pymongo.MongoClient()
-except:
-    PYMONGO_CLIENT = False
+from . import PYMONGO_CLIENT
 
 try:
     import motor
     MOTOR_CLIENT = motor.MotorClient()
-except:
+except ImportError:
     MOTOR_CLIENT = None
 
 
@@ -30,8 +26,7 @@ class HelperFuncionsTestCase(unittest.TestCase):
 
     @unittest.skipUnless(PYMONGO_CLIENT, 'pymongo not installed or connection refused')
     def test_valid_client_pymongo(self):
-        client = pymongo.MongoClient()
-        self.assertTrue(valid_client(client))
+        self.assertTrue(valid_client(PYMONGO_CLIENT))
 
     @unittest.skipUnless(MOTOR_CLIENT, 'motor not installed or connection refused')
     def test_valid_client_motor(self):

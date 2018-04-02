@@ -1,11 +1,9 @@
 import copy
 import datetime
-import math
 import unittest
 
+from bson import DBRef
 import six
-
-from bson import DBRef, ObjectId
 
 from nanomongo.field import Field
 from nanomongo.errors import ValidationError

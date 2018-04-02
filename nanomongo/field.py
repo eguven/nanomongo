@@ -11,7 +11,7 @@ from .util import check_keys
 
 class Field(object):
     """Instances of this class is used to define field types and automatically
-    create validators. Note that a Field definition has no value added::
+    create validators::
 
         field_name = Field(str, default='cheeseburger')
         foo = Field(datetime, auto_update=True)

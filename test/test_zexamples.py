@@ -1,20 +1,20 @@
 from __future__ import unicode_literals
-import six
 import unittest
+
+import pymongo
+import six
 
 from examples.example import User, Entry
 
-try:
-    import pymongo
-    PYMONGO_CLIENT = pymongo.MongoClient()
-except:
-    PYMONGO_CLIENT = False
+from . import PYMONGO_CLIENT
 
 
 class HelperFuncionsTestCase(unittest.TestCase):
     def setUp(self):
-        User.get_collection().remove()
-        Entry.get_collection().remove()
+        User.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        Entry.register(client=PYMONGO_CLIENT, db='nanotestdb')
+        User.get_collection().delete_many({})
+        Entry.get_collection().delete_many({})
 
     def print_stuff(self, added, *args):
         if User == type(added):
