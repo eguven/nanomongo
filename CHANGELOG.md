@@ -1,5 +1,14 @@
 # Change Log
 
+## [Unreleased](https://github.com/eguven/nanomongo/tree/HEAD)
+
+[Full Changelog](https://github.com/eguven/nanomongo/compare/0.4.1...HEAD)
+
+**Implemented enhancements:**
+
+- Housekeeping [\#20](https://github.com/eguven/nanomongo/pull/20) ([eguven](https://github.com/eguven))
+- Getting nanomongo working again [\#19](https://github.com/eguven/nanomongo/pull/19) ([eguven](https://github.com/eguven))
+
 ## [0.4.1](https://github.com/eguven/nanomongo/tree/0.4.1) (2015-03-01)
 **Implemented enhancements:**
 
